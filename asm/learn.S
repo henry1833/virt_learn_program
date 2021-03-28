@@ -18,9 +18,9 @@ _start:
     sti
 
     call clear_screen
+	call get_driver_parameters
+    call load_module
 	
-	call int13_ext_check
-	call read_sector_with_extension
 
 
 	lgdt gdt_pointer32 		# load GDT
@@ -68,9 +68,21 @@ entry32:
 	mov %eax,%cr4
     mov $0x1000,%esp
 
+#set page PAE
+    call pae_enable
 
+#open XD function
+    call execution_disable_enable
 
-	jmp code64_sel:entry6
+#init paging environment
+    call int_pae_paging
+
+#open paging
+    mov %cr0,%eax
+    bts $31, %eax
+    mov %eax,%cr0	
+
+	jmp code64_sel:entry64
 
 #define 32-bit gdt entry
 

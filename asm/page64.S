@@ -35,6 +35,11 @@ init_page:
 	mov $5, %edi
 	call clear_4k_pages
  
+    movd 0x201000|RW|US|P, (0x200000)                 # PML4T[0]
+    movd $0x0, 0x200004
+
+    movd $0x202000|RW|P, (0x200000 + 0x1FF* 8)
+	movd $0x0, (0x200000 + 0x1FF* 8 +4)
 	
 init_page_done:
     ret

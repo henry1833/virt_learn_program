@@ -18,12 +18,43 @@ clear_screen:
         popa
         ret
 
+#
+#
+#
+
+do_lba_to_chs:
+       push %ax
+	   mov sector_maximum,%cx
+	   mov header_maximum,%ax
+	   imul %ax,%cx
+	   shl $16,%edx
+	   mov %cx,%dx
+	   mov %edx,%ecx             #ecx = head_maximum * sector_maximum
+       mov start_sector,%eax
+	   xor %edx,%edx
+       div %ecx
+	   mov %eax,%ebx             #ebx = cylinder
+
+	   mov sector_maximum,%dx
+	   movzx %dx,%ecx
+	   xor %edx,%edx
+	   div %ecx  
+	   inc %edx                  #edx = sector, eax = head
+	   mov %dl,%cl
+	   mov %bl,%ch
+	   shr $2,%bx
+	   and $0x0c0,%bx
+	   or %bl,%cl
+	   mov %al,%dh
+	   pop %ax
+	   ret
+
 read_sector_with_chs:
        call do_lba_to_chs
 	   mov driver_number,%dl
 	   mov buffer_selector,%es
 	   mov buffer_offset, %bx
-	   movb %al, read_sector
+	   movb read_sectors,%al
 	   mov $0x2,%ah
 	   int $0x13
 	   movzx %ah,%ax
@@ -38,11 +69,20 @@ read_sector:
 	   pop %es
 	   ret
 
+load_module:
+       movw $0x2,read_sector
+	   call read_sector
+	   test %ax,%ax
+	   jnz do_load_module_done
+	   
+do_load_module_done:
+	   ret
+
 get_driver_parameters:
        push %dx
 	   push %cx
 	   push %bx
-	   mov %0x08,%ah
+	   mov $0x08,%ah
 	   mov driver_number,%dl
 	   mov parameter_table,%di
 	   int $0x13
@@ -87,8 +127,12 @@ disk_address_packet:
     buffer_offset:	    .word   0x0     # read numbers of sectors
     dst_segment:	    .word   0x0     # dst segment
     dst_offset:		    .word   0x0     # dst offset
-    start_sector:	    .quad   0x0     # start sectors for read 
+    start_sector:	    .long   0x0     # start sectors for read 
 
+read_chs_parameter:
+    CL_P:    .byte   0x0
+	DH_P:    .byte   0x0
+	CH_P:    .byte   0x0
 
 driver_parameters_table:
     driver_type:        .byte 0x0
