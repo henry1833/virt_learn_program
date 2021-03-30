@@ -24,7 +24,6 @@ clear_screen:
 #
 #       .align 8
 do_lba_to_chs:
-       push %eax
 	   mov sector_maximum,%cx
 	   mov header_maximum,%ax
 	   mul %cx
@@ -48,7 +47,6 @@ do_lba_to_chs:
 	   and $0x0c0,%bx
 	   or %bl,%cl
 	   mov %al,%dh
-	   pop %eax
 	   ret
 
 #       .align 8

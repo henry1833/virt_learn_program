@@ -1,4 +1,5 @@
 .include "system_data.h"
+.include "page.h"
 
 BASE            =   0x7c00
 
@@ -64,10 +65,11 @@ idt_pointer64:
 .section .text.protected_mode
 		.code32
 entry32:
-    mov %cr4,%eax
-	bts $5, %eax
-	mov %eax,%cr4
-    mov $0x1000,%esp
+##set protected mode run environment
+##
+
+#init paging environment
+#    call int_paging
 
 #set page PAE
 #    call pae_enable
@@ -75,32 +77,39 @@ entry32:
 #open XD function
 #    call execution_disable_enable
 
-#init paging environment
-#    call int_pae_paging
+    mov PML4T_BASE,%eax
+	mov %eax,%cr3
+	
+#set CR4 register
+    mov %cr4,%eax
+	bts $5, %eax
+	mov %eax, %cr4
 
-#open paging
-#    mov %cr0,%eax
-#    bts $31, %eax
-#    mov %eax,%cr0	
+#set EFER register EFER.LME = 1
+    mov IA32_EFER,%ecx
+	rdmsr
+	bts $8,%eax
+	wrmsr
+
+#open long mode 
+    mov %cr0,%eax
+    bts $31, %eax
+    mov %eax,%cr0	
 
 	jmp $kernel_code64_sel,$entry64
 
 #define 32-bit gdt entry
 
-.section .text.long_mode
 
+
+.section .text.long_mode		
 		.code64
-entry64:		
-        mov %rax,%r9
-		mov $0xfffff,%rdi
-
-
-#.section .long_mode
-#		.text
-#		.code64
-#        .org LONG_BASE	
-#entry64:
-		
+entry64:
+	mov $KERNEL_SS,%ax
+    mov %ax,%ds
+    mov %ax,%es
+    mov %ax,%ss
+    mov %rsp, $PROCESSOR0_KERNEL_RSP	
 #    mov GP_HANDLER_VECTOR, %rsi
 #	mov GP_handler,%rdi
 #	call set_interrupt_handler
@@ -112,4 +121,13 @@ entry64:
 #	mov DB_HANDLER_VECTOR, %rsi
 #	mov DB_handler,%rdi
 #	call set_interrupt_handler
-	
+    push USER_SS | 0x3
+	mov  USER_RSP, %rax
+	push %rax
+	push USER_CS | 0x3
+	push $user_entry
+	retf64
+
+user_entry:
+    
+    jmp $
