@@ -1,157 +1,156 @@
 
 #
-# 定义 opcode
+# define opcode
 #
-.equ REX_W         ,         DB 0x48
-.equ O16           ,         DB 0x66
-.equ O32           ,         DB 0x66
-.equ O64           ,         DB 0x48
-.equ A16           ,         DB 0x67
-.equ A32           ,         DB 0x67
+.equ REX_W         ,          .byte 0x48
+.equ O16           ,          .byte 0x66
+.equ O32           ,          .byte 0x66
+.equ O64           ,          .byte 0x48
+.equ A16           ,          .byte 0x67
+.equ A32           ,          .byte 0x67
 
-.equ iret64        ,         iretq
-.equ retf64        ,         DW 0x0CB48
-.equ sysexit64     ,         DB 48h, 0Fh, 35h
-.equ sysret64      ,         DB 48h, 0Fh, 07h
-
-
-# 定义 lea rax, [rip] 指令的 encode
-# 因为: nasm 语言层上不支持 [rip] 寻址
-.equ GET_RIP                 DB 48h, 8Dh, 05h, 00h, 00h, 00h, 00h
+.equ iret64        ,           iretq
+.equ retf64        ,          .word 0x0CB48
+.equ sysexit64     ,          .byte 0x48, 0x0F, 0x35
+.equ sysret64      ,          .byte 0x48h, 0x0Fh, 0x07
 
 
-
-# CR0 寄存器控制位
-.equ PE_BIT       ,          0
-.equ MP_BIT       ,          1
-.equ EM_BIT       ,          2
-.equ TS_BIT       ,          3
-.equ ET_BIT       ,          4
-.equ NE_BIT       ,          5
-.equ WP_BIT       ,          16
-.equ AM_BIT       ,          18
-.equ NW_BIT       ,          29
-.equ CD_BIT       ,          30
-.equ PG_BIT       ,          31
-
-#CR4 寄存器控制位
-.equ WME_BIT                 0
-.equ PVI_BIT                 1
-.equ TSD_BIT                 2
-.equ DE_BIT                  3
-.equ PSE_BIT                 4
-.equ PAE_BIT                 5
-.equ MCE_BIT                 6
-.equ PGE_BIT                 7
-.equ PCE_BIT                 8
-.equ OSFXSR_BIT              9
-.equ OSXMMEXCPT_BIT          10
-.equ VMXE_BIT                13
-.equ SMXE_BIT                14
-.equ PCIDE_BIT               17
-.equ OSXSAVE_BIT             18
-.equ SMEP_BIT                20
-
-# SMM 模式的基地址
-.equ SMBASE                  30000H
-
-
-.equ IA32_APIC_BASE                  1BH
-.equ IA32_FEATURE_CONTROL            3AH
-.equ IA32_SMM_MONITOR_CTL            9BH
-.equ IA32_MISC_ENABLE                1A0H
-.equ IA32_CPU_DCA_CAP                1F9H
-.equ IA32_MONITOR_FILTER_LINE_SIZE   06H
-.equ IA32_TIME_STAMP_COUNTER         10H
-.equ IA32_TSC_COUNTER                10H
-
-
-#***** 定义 MTRR 寄存器的地址 ******
-
-#下面是 Fixed-rang MTRR 寄存器的定义　
-.equ IA32_MTRR_FIX64K_00000                                       250H
-.equ IA32_MTRR_FIX16K_80000                                       258H
-.equ IA32_MTRR_FIX16K_A0000                                       259H
-.equ IA32_MTRR_FIX4K_C0000                                        268H
-.equ IA32_MTRR_FIX4K_C8000                                        269H
-.equ IA32_MTRR_FIX4K_D0000                                        26AH
-.equ IA32_MTRR_FIX4K_D8000                                        26BH
-.equ IA32_MTRR_FIX4K_E0000                                        26CH
-.equ IA32_MTRR_FIX4K_E8000                                        26DH
-.equ IA32_MTRR_FIX4K_F0000                                        26EH
-.equ IA32_MTRR_FIX4K_F8000                                        26FH
-
-# 下面是 MTRR 的功能寄存器定义
-.equ IA32_MTRRCAP                                                 0FEH
-.equ IA32_MTRR_DEF_TYPE                                           2FFH
-
-# 下面定义 MTRR 的 PHYSBASE/PHYSMASK 寄存器
-.equ IA32_MTRR_PHYSBASE0                                        200H
-.equ IA32_MTRR_PHYSMASK0                                        201H
-.equ IA32_MTRR_PHYSBASE1                                        202H
-.equ IA32_MTRR_PHYSMASK1                                        203H
-.equ IA32_MTRR_PHYSBASE2                                        204H
-.equ IA32_MTRR_PHYSMASK2                                        205H
-.equ IA32_MTRR_PHYSBASE3                                        206H
-.equ IA32_MTRR_PHYSMASK3                                        207H
-.equ IA32_MTRR_PHYSBASE4                                        208H
-.equ IA32_MTRR_PHYSMASK4                                        209H
-.equ IA32_MTRR_PHYSBASE5                                        20AH
-.equ IA32_MTRR_PHYSMASK5                                        20BH
-.equ IA32_MTRR_PHYSBASE6                                        20CH
-.equ IA32_MTRR_PHYSMASK6                                        20DH
-.equ IA32_MTRR_PHYSBASE7                                        20EH
-.equ IA32_MTRR_PHYSMASK7                                        20FH
-.equ IA32_MTRR_PHYSBASE8                                        210H
-.equ IA32_MTRR_PHYSMASK8                                        211H
-.equ IA32_MTRR_PHYSBASE9                                        212H
-.equ IA32_MTRR_PHYSMASK9                                        213H
-
-# 下面是 SMRR 寄存器
-.equ IA32_SMRR_PHYSBASE                                         1F2H
-.equ IA32_SMRR_PHYSMASK                                         1F3H
-
-# 下面是 PAT 寄存器
-.equ IA32_PAT                                                   277H
-
-
-# 下面是对特殊指令提供支持的 MSR 寄存器定义
-.equ IA32_SYSENTER_CS                                           174H
-.equ IA32_SYSENTER_ESP                                          175H
-.equ IA32_SYSENTER_EIP                                          176H
-
-
-# 下面是 x64 体系的支持
-.equ IA32_EFER                                                  0C0000080H
-.equ IA32_STAR                                                  0C0000081H
-.equ IA32_LSTAR                                                 0C0000082H
-.equ IA32_FMASK                                                 0C0000084H
-.equ IA32_FS_BASE                                               0C0000100H
-.equ IA32_GS_BASE                                               0C0000101H
-.equ IA32_KERNEL_GS_BASE                                        0C0000102H
+# define lea rax, [rip] instruction encode
+.equ GET_RIP       ,          .byte 48h, 8Dh, 05h, 00h, 00h, 00h, 00h
 
 
 
-# ##### 为 AMD 机器定义 #######
-.equ MSR_SMI_ON_IO_TRAP0                                        0C0010050H
-.equ MSR_SMI_ON_IO_TRAP1                                        0C0010051H
-.equ MSR_SMI_ON_IO_TRAP2                                        0C0010052H
-.equ MSR_SMI_ON_IO_TRAP3                                        0C0010053H
-.equ MSR_SMI_ON_IO_TRAP_CTL_STS                                 0C0010054H
+# CR0 control bits
+.equ PE_BIT        ,          0
+.equ MP_BIT        ,          1
+.equ EM_BIT        ,          2
+.equ TS_BIT        ,          3
+.equ ET_BIT        ,          4
+.equ NE_BIT        ,          5
+.equ WP_BIT        ,          16
+.equ AM_BIT        ,          18
+.equ NW_BIT        ,          29
+.equ CD_BIT        ,          30
+.equ PG_BIT        ,          31
+
+#CR4 control bits
+.equ WME_BIT       ,          0
+.equ PVI_BIT       ,          1
+.equ TSD_BIT       ,          2
+.equ DE_BIT        ,          3
+.equ PSE_BIT       ,          4
+.equ PAE_BIT       ,          5
+.equ MCE_BIT       ,          6
+.equ PGE_BIT       ,          7
+.equ PCE_BIT       ,          8
+.equ OSFXSR_BIT    ,          9
+.equ OSXMMEXCPT_BIT,          10
+.equ VMXE_BIT      ,          13
+.equ SMXE_BIT      ,          14
+.equ PCIDE_BIT     ,          17
+.equ OSXSAVE_BIT   ,          18
+.equ SMEP_BIT      ,          20
+
+# SMM mode base address
+.equ SMBASE        ,          0x30000
 
 
-# 与 dubug/performance monitoring 相关的 MSRs
+.equ IA32_APIC_BASE                 , 0x1B
+.equ IA32_FEATURE_CONTROL           , 0x3A
+.equ IA32_SMM_MONITOR_CTL           , 0x9B
+.equ IA32_MISC_ENABLE               , 0x1A0
+.equ IA32_CPU_DCA_CAP               , 0x1F9
+.equ IA32_MONITOR_FILTER_LINE_SIZE  , 0x06
+.equ IA32_TIME_STAMP_COUNTER        , 0x10
+.equ IA32_TSC_COUNTER               , 0x10
 
-.equ IA32_PEBS_ENABLE                                           3F1H
+
+#***** define MTRR register address******
+
+# Fixed-rang MTRR 　
+.equ IA32_MTRR_FIX64K_00000         ,                            0x250
+.equ IA32_MTRR_FIX16K_80000         ,                            0x258
+.equ IA32_MTRR_FIX16K_A0000         ,                            0x259
+.equ IA32_MTRR_FIX4K_C0000          ,                            0x268
+.equ IA32_MTRR_FIX4K_C8000          ,                            0x269
+.equ IA32_MTRR_FIX4K_D0000          ,                            0x26A
+.equ IA32_MTRR_FIX4K_D8000          ,                            0x26B
+.equ IA32_MTRR_FIX4K_E0000          ,                            0x26C
+.equ IA32_MTRR_FIX4K_E8000          ,                            0x26D
+.equ IA32_MTRR_FIX4K_F0000          ,                            0x26E
+.equ IA32_MTRR_FIX4K_F8000          ,                            0x26F
+															   
+# MTRR function register                                       
+.equ IA32_MTRRCAP                   ,                            0x0FE
+.equ IA32_MTRR_DEF_TYPE             ,                            0x2FF
+
+# defint MTRR  PHYSBASE/PHYSMASK register
+.equ IA32_MTRR_PHYSBASE0            ,                            0x200
+.equ IA32_MTRR_PHYSMASK0            ,                            0x201
+.equ IA32_MTRR_PHYSBASE1            ,                            0x202
+.equ IA32_MTRR_PHYSMASK1            ,                            0x203
+.equ IA32_MTRR_PHYSBASE2            ,                            0x204
+.equ IA32_MTRR_PHYSMASK2            ,                            0x205
+.equ IA32_MTRR_PHYSBASE3            ,                            0x206
+.equ IA32_MTRR_PHYSMASK3            ,                            0x207
+.equ IA32_MTRR_PHYSBASE4            ,                            0x208
+.equ IA32_MTRR_PHYSMASK4            ,                            0x209
+.equ IA32_MTRR_PHYSBASE5            ,                            0x20A
+.equ IA32_MTRR_PHYSMASK5            ,                            0x20B
+.equ IA32_MTRR_PHYSBASE6            ,                            0x20C
+.equ IA32_MTRR_PHYSMASK6            ,                            0x20D
+.equ IA32_MTRR_PHYSBASE7            ,                            0x20E
+.equ IA32_MTRR_PHYSMASK7            ,                            0x20F
+.equ IA32_MTRR_PHYSBASE8            ,                            0x210
+.equ IA32_MTRR_PHYSMASK8            ,                            0x211
+.equ IA32_MTRR_PHYSBASE9            ,                            0x212
+.equ IA32_MTRR_PHYSMASK9            ,                            0x213
+
+# SMRR registers
+.equ IA32_SMRR_PHYSBASE             ,                            0x1F2
+.equ IA32_SMRR_PHYSMASK             ,                            0x1F3
+
+# PAT register
+.equ IA32_PAT                       ,                            0x277
+
+
+# define Special instructions MSR registers
+.equ IA32_SYSENTER_CS               ,                            0x174
+.equ IA32_SYSENTER_ESP              ,                            0x175
+.equ IA32_SYSENTER_EIP              ,                            0x176
+
+
+#  support x64 mode register
+.equ IA32_EFER                      ,                            0x0C0000080
+.equ IA32_STAR                      ,                            0x0C0000081
+.equ IA32_LSTAR                     ,                            0x0C0000082
+.equ IA32_FMASK                     ,                            0x0C0000084
+.equ IA32_FS_BASE                   ,                            0x0C0000100
+.equ IA32_GS_BASE                   ,                            0x0C0000101
+.equ IA32_KERNEL_GS_BASE            ,                            0x0C0000102
+
+
+
+# ##### define for AMD #######
+.equ MSR_SMI_ON_IO_TRAP0            ,                            0x0C0010050
+.equ MSR_SMI_ON_IO_TRAP1            ,                            0x0C0010051
+.equ MSR_SMI_ON_IO_TRAP2            ,                            0x0C0010052
+.equ MSR_SMI_ON_IO_TRAP3            ,                            0x0C0010053
+.equ MSR_SMI_ON_IO_TRAP_CTL_STS     ,                            0x0C0010054
+
+
+# define  dubug/performance monitoring  MSR registers
+
+.equ IA32_PEBS_ENABLE               ,                            0x3F1
 # general-purpose counter 寄存器
-.equ IA32_PERFEVTSEL0                                           186H
-.equ IA32_PERFEVTSEL1                                           187H
-.equ IA32_PERFEVTSEL2                                           188H
-.equ IA32_PERFEVTSEL3                                           189H
-.equ IA32_PMC0                                                  0C1H
-.equ IA32_PMC1                                                  0C2H
-.equ IA32_PMC2                                                  0C3H
-.equ IA32_PMC3                                                  0C4H
+.equ IA32_PERFEVTSEL0               ,                            0x186
+.equ IA32_PERFEVTSEL1               ,                            0x187
+.equ IA32_PERFEVTSEL2               ,                            0x188
+.equ IA32_PERFEVTSEL3               ,                            0x189
+.equ IA32_PMC0                      ,                            0x0C1
+.equ IA32_PMC1                      ,                            0x0C2
+.equ IA32_PMC2                      ,                            0x0C3
+.equ IA32_PMC3                      ,                            0x0C4
 
 # fixed-counter 寄存器
 .equ IA32_FIXED_CTR0                                            309H
@@ -236,7 +235,7 @@
 
 
 #
-# 下面是关于 VMX 的 MSR 
+# vmx MSR registers
 #
 .equ IA32_VMX_BASIC                                          480H
 .equ IA32_VMX_PINBASED_CTS                                   481H
@@ -254,7 +253,7 @@
 
 
 
-# ########## 关于 CPU 的一些宏定义 ##############
+# ########## define some macro ##############
 
 
 # ---------------------------------------------

@@ -1,5 +1,6 @@
 .include "system_data.h"
 .include "page.h"
+.include "CPU.h"
 
 BASE            =   0x7c00
 
@@ -15,7 +16,7 @@ _start:
 	mov %ax,%ds
 	mov %ax,%es
 	mov %ax,%ss
-	mov BASE,%sp
+	mov $BASE,%sp
     sti
 	
     call clear_screen
@@ -30,7 +31,7 @@ _start:
 	lidt idt_pointer32      # load IDT
 	
 	mov %cr0,%eax
-	mov $0, %eax
+	bts $0, %eax
 	mov %eax,%cr0
 	
 	jmp $code32_sel,$entry32
@@ -40,10 +41,11 @@ _start:
 .fill 510-(.-_start),1,0
 boot_magic: .byte 0x55,0xaa
 
+.fill 16,1,0
 
 .include "table_desc.S"
 		
-		.align 4
+		.align 8
 gdt_pointer32:
        .word      (__global_descriptor_table_end - __global_descriptor_table) - 1
        .long      __global_descriptor_table
@@ -52,7 +54,7 @@ idt_pointer32:
        .long       __interrupt_descriptor_table
 
 
-       .align 4
+       .align 8
 gdt_pointer64:
        .word      (__global_descriptor_table_end - __global_descriptor_table) - 1
        .quad      __global_descriptor_table
@@ -68,22 +70,24 @@ entry32:
 ##set protected mode run environment
 ##
 
+##open sse instruction set
+    mov %cr4, %eax
+	bts $0x9, %eax
+	mov %eax, %cr4
+	
 #init paging environment
-#    call int_paging
+    call int_paging
 
 #set page PAE
-#    call pae_enable
+    call pae_enable
 
 #open XD function
-#    call execution_disable_enable
+    call execution_disable_enable
 
-    mov PML4T_BASE,%eax
+    mov $PML4T_BASE,%eax
 	mov %eax,%cr3
 	
-#set CR4 register
-    mov %cr4,%eax
-	bts $5, %eax
-	mov %eax, %cr4
+
 
 #set EFER register EFER.LME = 1
     mov IA32_EFER,%ecx
@@ -100,7 +104,17 @@ entry32:
 
 #define 32-bit gdt entry
 
-
+    .align 8
+pae_enable:
+    mov $0x1,%eax
+	cpuid
+	bt  $0x6,%edx
+	jnc pae_enable_done
+	mov %cr4,%eax
+	bts $PAE_BIT, %eax
+	mov %eax, %cr4
+pae_enable_done:
+    ret
 
 .section .text.long_mode		
 		.code64

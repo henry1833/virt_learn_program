@@ -3,7 +3,7 @@
 # description:
 #                clear the screen & set cursor position at (0,0)
 #------------------------------------------------------
-#        .align 8
+        .align 8
 clear_screen:
         pusha
         mov $0x0600,%ax
@@ -22,7 +22,7 @@ clear_screen:
 #
 #
 #
-#       .align 8
+       .align 8
 do_lba_to_chs:
 	   mov sector_maximum,%cx
 	   mov header_maximum,%ax
@@ -49,7 +49,7 @@ do_lba_to_chs:
 	   mov %al,%dh
 	   ret
 
-#       .align 8
+       .align 8
 read_sector_with_chs:
        call do_lba_to_chs
 	   mov driver_number,%dl
@@ -63,7 +63,7 @@ read_sector_with_chs_done:
        ret
 
 
-#	   .align 8
+	   .align 8
 
 load_module:
        movw $0x7e00,(buffer_offset)
@@ -96,7 +96,7 @@ loop_read:
 do_load_module_done:
 	   ret
 
-#       .align 8
+       .align 8
 get_driver_parameters:
        push %dx
 	   push %cx
@@ -139,7 +139,7 @@ read_sector_with_extension:
 		movzx %ah,%ax
 		ret
 
-		.align 4
+		.align 8
 disk_address_packet:
     size:               .byte   0x10    # size of packet
     read_sectors:	    .word   0x0     # number of sector
@@ -149,10 +149,6 @@ disk_address_packet:
                         .long   0x0
 	total_sectors:      .long   0x0
 	
-read_chs_parameter:
-    CL_P:    .byte   0x0
-	DH_P:    .byte   0x0
-	CH_P:    .byte   0x0
 
 driver_parameters_table:
     driver_type:        .byte 0x0
