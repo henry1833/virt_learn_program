@@ -18,17 +18,6 @@ clear_4K_page_loop:
         ret
 
 
-#PML4T              PDPT             PDET               PT  
-#0x200000           0x201000         0x203000           0x205000  
-#0x200000+0x1ff*8   0x202000
-#0x200000+0x0ff*8   0x300000 
-#
-#                   0x201000+3*8     0x210000        
-#                                    0x210000+0x1ff*8   0x600000
-#                                    
-#
-#
-
 bsp_init_page:
 init_page:
 	mov IA32_APIC_BASE,%ecx
@@ -46,17 +35,11 @@ init_page:
 	mov $5, %edi
 	call clear_4k_pages
  
-    movd 0x201000|RW|US|P, (0x200000)                 # PML4T[0] level 2 0x201000
+    movd 0x201000|RW|US|P, (0x200000)                 # PML4T[0]
+    movd $0x0, 0x200004
 
-    movq $0x202000|RW|P, (0x200000 + 0x1FF* 8)        
-
-    movq $0x300000|RW|US|P, (0x200000 + 0x0ff *8)
-
-    movq $0x203000|RW|US|P, (0x201000)
-	
-	movq $0x201000|RW|US|P, (0x201000 + 3*8)
-	
-	movq $0x204000|RW|US|P, (0x202000 + 0x1e0*8)
+    movd $0x202000|RW|P, (0x200000 + 0x1FF* 8)
+	movd $0x0, (0x200000 + 0x1FF* 8 +4)
 	
 init_page_done:
     ret

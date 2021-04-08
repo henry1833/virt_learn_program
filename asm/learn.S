@@ -1,5 +1,5 @@
 .include "system_data.h"
-.include "page.h"
+#.include "page.h"
 .include "CPU.h"
 
 BASE            =   0x7c00
@@ -76,15 +76,15 @@ entry32:
 	mov %eax, %cr4
 	
 #init paging environment
-    call int_paging
+#    call int_paging
 
 #set page PAE
-    call pae_enable
+#    call pae_enable
 
 #open XD function
-    call execution_disable_enable
+#    call execution_disable_enable
 
-    mov $PML4T_BASE,%eax
+#    mov $PML4T_BASE,%eax
 	mov %eax,%cr3
 	
 
@@ -119,11 +119,11 @@ pae_enable_done:
 .section .text.long_mode		
 		.code64
 entry64:
-	mov $KERNEL_SS,%ax
+#	mov $KERNEL_SS,%ax
     mov %ax,%ds
     mov %ax,%es
     mov %ax,%ss
-    mov %rsp, $PROCESSOR0_KERNEL_RSP	
+#    mov %rsp, $PROCESSOR0_KERNEL_RSP	
 #    mov GP_HANDLER_VECTOR, %rsi
 #	mov GP_handler,%rdi
 #	call set_interrupt_handler
@@ -135,13 +135,13 @@ entry64:
 #	mov DB_HANDLER_VECTOR, %rsi
 #	mov DB_handler,%rdi
 #	call set_interrupt_handler
-    push USER_SS | 0x3
-	mov  USER_RSP, %rax
-	push %rax
-	push USER_CS | 0x3
-	push $user_entry
-	retf64
+#    push $USER_SS | $0x3
+#	mov  $USER_RSP, %rax
+#	push %rax
+#	push $USER_CS | $0x3
+#	push $user_entry
+#	retf64
 
-user_entry:
-    
-    jmp $
+user_entry: 
+#    jmp $
+	

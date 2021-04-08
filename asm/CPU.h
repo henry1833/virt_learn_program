@@ -2,21 +2,21 @@
 #
 # define opcode
 #
-.equ REX_W         ,          .byte 0x48
-.equ O16           ,          .byte 0x66
-.equ O32           ,          .byte 0x66
-.equ O64           ,          .byte 0x48
-.equ A16           ,          .byte 0x67
-.equ A32           ,          .byte 0x67
+.equ REX_W         ,          0x48
+.equ O16           ,          0x66
+.equ O32           ,          0x66
+.equ O64           ,          0x48
+.equ A16           ,          0x67
+.equ A32           ,          0x67
 
 .equ iret64        ,           iretq
-.equ retf64        ,          .word 0x0CB48
-.equ sysexit64     ,          .byte 0x48, 0x0F, 0x35
-.equ sysret64      ,          .byte 0x48h, 0x0Fh, 0x07
+.equ retf64        ,          0x0CB48
+#.equ sysexit64     ,          .byte 0x48, 0x0F, 0x35
+#.equ sysret64      ,          .byte 0x48h, 0x0Fh, 0x07
 
 
 # define lea rax, [rip] instruction encode
-.equ GET_RIP       ,          .byte 48h, 8Dh, 05h, 00h, 00h, 00h, 00h
+#.equ GET_RIP       ,          .byte 48h, 8Dh, 05h, 00h, 00h, 00h, 00h
 
 
 
@@ -152,103 +152,62 @@
 .equ IA32_PMC2                      ,                            0x0C3
 .equ IA32_PMC3                      ,                            0x0C4
 
-# fixed-counter 寄存器
-.equ IA32_FIXED_CTR0                                            309H
-.equ MSR_PERF_FIXED_CTR0                                        309H
-.equ IA32_FIXED_CTR1                                            30AH
-.equ MSR_PERF_FIXED_CTR1                                        30AH
-.equ IA32_FIXED_CTR2                                            30BH
-.equ MSR_PERF_FIXED_CTR2                                        30BH
+# fixed-counter register            
+.equ IA32_FIXED_CTR0                ,                            0x309
+.equ MSR_PERF_FIXED_CTR0            ,                            0x309
+.equ IA32_FIXED_CTR1                ,                            0x30A
+.equ MSR_PERF_FIXED_CTR1            ,                            0x30A
+.equ IA32_FIXED_CTR2                ,                            0x30B
+.equ MSR_PERF_FIXED_CTR2            ,                            0x30B
 
-.equ IA32_FIXED_CTR_CTRL                                        38DH
-.equ MSR_PERF_FIXED_CTR_CTRL                                    38DH
+.equ IA32_FIXED_CTR_CTRL            ,                            0x38D
+.equ MSR_PERF_FIXED_CTR_CTRL        ,                            0x38D
 
-.equ IA32_PERF_STATUS                                           198H
-.equ IA32_PERF_CTL                                              199H
+.equ IA32_PERF_STATUS               ,                            0x198
+.equ IA32_PERF_CTL                  ,                            0x199
 
-.equ IA32_PERF_CAPABILITIES                                     345H
-.equ IA32_PERF_GLOBAL_STATUS                                    38EH
-.equ MSR_PERF_GLOBAL_STATUS                                     38EH
-.equ MSR_PERF_GLOBAL_CTRL                                       38FH
-.equ IA32_PERF_GLOBAL_CTRL                                      38FH
-.equ IA32_PERF_GLOBAL_OVF_CTRL                                  390H
-.equ MSR_PERF_GLOBAL_OVF_CTRL                                   390H
+.equ IA32_PERF_CAPABILITIES         ,                            0x345
+.equ IA32_PERF_GLOBAL_STATUS        ,                            0x38E
+.equ MSR_PERF_GLOBAL_STATUS         ,                            0x38E
+.equ MSR_PERF_GLOBAL_CTRL           ,                            0x38F
+.equ IA32_PERF_GLOBAL_CTRL          ,                            0x38F
+.equ IA32_PERF_GLOBAL_OVF_CTRL      ,                            0x390
+.equ MSR_PERF_GLOBAL_OVF_CTRL       ,                            0x390
 
-.equ MSR_PEBS_LD_LAT                                            3F6H
+.equ MSR_PEBS_LD_LAT                ,                            0x3F6
 
-.equ IA32_DS_AREA                                               600H
-.equ IA32_TSC_DEADLINE                                          6E0H
-
-
-# 下面是 06_25H(DisplayFamily_DisplayModel) 处理器的 MSRs， 适用于 Nehalem/Westmere 微架构
-
-.equ MSR_LBR_SELECT                                             1C8H
-.equ MSR_LASTBRANCH_TOS                                         1C9H
-.equ IA32_DEBUGCTL                                              1D9H
-.equ MSR_LER_FROM_LIP                                           1DDH
-.equ MSR_LER_TO_LIP                                             1DEH
-.equ MSR_PEBS_ENABLE                                            3F1H
-.equ MSR_LASTBRANCH_0_FROM_IP                                   680H
-.equ MSR_LASTBRANCH_1_FROM_IP                                   681H
-.equ MSR_LASTBRANCH_2_FROM_IP                                   682H
-.equ MSR_LASTBRANCH_3_FROM_IP                                   683H
-.equ MSR_LASTBRANCH_4_FROM_IP                                   684H
-.equ MSR_LASTBRANCH_5_FROM_IP                                   685H
-.equ MSR_LASTBRANCH_6_FROM_IP                                   686H
-.equ MSR_LASTBRANCH_7_FROM_IP                                   687H
-.equ MSR_LASTBRANCH_8_FROM_IP                                   688H
-.equ MSR_LASTBRANCH_9_FROM_IP                                   689H
-.equ MSR_LASTBRANCH_10_FROM_IP                                  68AH
-.equ MSR_LASTBRANCH_11_FROM_IP                                  68BH
-.equ MSR_LASTBRANCH_12_FROM_IP                                  68CH
-.equ MSR_LASTBRANCH_13_FROM_IP                                  68DH
-.equ MSR_LASTBRANCH_14_FROM_IP                                  68EH
-.equ MSR_LASTBRANCH_15_FROM_IP                                  68FH
-.equ MSR_LASTBRANCH_0_TO_IP                                     6C0H
-.equ MSR_LASTBRANCH_1_TO_IP                                     6C1H
-.equ MSR_LASTBRANCH_2_TO_IP                                     6C2H
-.equ MSR_LASTBRANCH_3_TO_IP                                     6C3H
-.equ MSR_LASTBRANCH_4_TO_IP                                     6C4H
-.equ MSR_LASTBRANCH_5_TO_IP                                     6C5H
-.equ MSR_LASTBRANCH_6_TO_IP                                     6C6H
-.equ MSR_LASTBRANCH_7_TO_IP                                     6C7H
-.equ MSR_LASTBRANCH_8_TO_IP                                     6C8H
-.equ MSR_LASTBRANCH_9_TO_IP                                     6C9H
-.equ MSR_LASTBRANCH_10_TO_IP                                    6CAH
-.equ MSR_LASTBRANCH_11_TO_IP                                    6CBH
-.equ MSR_LASTBRANCH_12_TO_IP                                    6CCH
-.equ MSR_LASTBRANCH_13_TO_IP                                    6CDH
-.equ MSR_LASTBRANCH_14_TO_IP                                    6CEH
-.equ MSR_LASTBRANCH_15_TO_IP                                    6CFH
+.equ IA32_DS_AREA                   ,                            0x600
+.equ IA32_TSC_DEADLINE              ,                            0x6E0
 
 
-# Nehalem 微架构的辅助 TSC 寄存器
-.equ IA32_TSC_AUX                                                0C0000103H
+
+# Nehalem  TSC registers
+.equ IA32_TSC_AUX                   ,                             0x0C0000103
 
 
-.equ MSR_FSB_FREQ                                            0CDH
-.equ IA32_MPERF                                              0E7H
-.equ IA32_APERF                                              0E8H
-.equ IA32_PLATFORM_ID                                        17H
-.equ MSR_PLATFORM_ID                                         17H
-.equ MSR_PERF_STATUS                                         198H
+.equ MSR_FSB_FREQ                   ,                         0x0CD
+.equ IA32_MPERF                     ,                         0x0E7
+.equ IA32_APERF                     ,                         0x0E8
+.equ IA32_PLATFORM_ID               ,                         0x17
+.equ MSR_PLATFORM_ID                ,                         0x17
+.equ MSR_PERF_STATUS                ,                         0x198
 
 
 #
 # vmx MSR registers
 #
-.equ IA32_VMX_BASIC                                          480H
-.equ IA32_VMX_PINBASED_CTS                                   481H
-.equ IA32_VMX_PROCBASED_CTLS                                 482H
-.equ IA32_VMX_EXIT_CTLS                                      483H
-.equ IA32_VMX_ENTRY_CTLS                                     484H
-.equ IA32_VMX_MISC                                           485H
-.equ IA32_VMX_CR0_FIXED0                                     486H
-.equ IA32_VMX_CR0_FIXED1                                     487H
-.equ IA32_VMX_CR4_FIXED0                                     488H
-.equ IA32_VMX_CR4_FIXED1                                     489H
-.equ IA32_VMX_VMCS_ENUM                                      48AH
-.equ IA32_VMX_PROCBASED_CTLS2                                48BH
+.equ IA32_VMX_BASIC                  ,                        0x480
+.equ IA32_VMX_PINBASED_CTS           ,                        0x481
+.equ IA32_VMX_PROCBASED_CTLS         ,                        0x482
+.equ IA32_VMX_EXIT_CTLS              ,                        0x483
+.equ IA32_VMX_ENTRY_CTLS             ,                        0x484
+.equ IA32_VMX_MISC                   ,                        0x485
+.equ IA32_VMX_CR0_FIXED0             ,                        0x486
+.equ IA32_VMX_CR0_FIXED1             ,                        0x487
+.equ IA32_VMX_CR4_FIXED0             ,                        0x488
+.equ IA32_VMX_CR4_FIXED1             ,                        0x489
+.equ IA32_VMX_VMCS_ENUM              ,                        0x48A
+.equ IA32_VMX_PROCBASED_CTLS2        ,                        0x48B
 
 
 
@@ -261,74 +220,74 @@
 # description:
 #                 set 0x92[1] to enable A20 line
 #----------------------------------------------
-.macro FAST_A20_ENABLE        0
-        in al, SYSTEM_CONTROL_PORTA                                # port 0x92
-        or al, 0x02                                                # set A20 bit
-        out SYSTEM_CONTROL_PORTA, al
-.endmacro
+.macro FAST_A20_ENABLE      
+        in $SYSTEM_CONTROL_PORTA,%al                                # port 0x92
+        or $0x02,%al                                                # set A20 bit
+        out %al, $SYSTEM_CONTROL_PORTA
+.endm
 
 
 #------------------------------------------------
 # macro: NMI_DISABLE
 # description:
-#                设置 NMI_EN 寄存器的 bit 7 为 1
+#                set NMI_EN register bit 7 as 1
 #------------------------------------------------
-.macro NMI_DISABLE 0
-        in al, NMI_EN_PORT                                        # port 0x70
-        or al, 0x80                                               # disable all NMI source
-        out NMI_EN_PORT, al
-.endmacro
+.macro NMI_DISABLE
+        in $NMI_EN_PORT,%al                                        # port 0x70
+        or $0x80,%al                                               # disable all NMI source
+        out %al,$NMI_EN_PORT
+.endm
 
 #------------------------------------------------
 # macro: NMI_ENABLE
 # description:
 #                set 0x70[7] to 0
 #------------------------------------------------
-.macro NMI_ENABLE 0
-        in al, NMI_EN_PORT                                        # port 0x70
-        and al, 0x7f                                                # enable NMI source
-        out NMI_EN_PORT, al
-.endmacro
+.macro NMI_ENABLE 
+        in $NMI_EN_PORT,%al                                        # port 0x70
+        and $0x7f,%al                                                # enable NMI source
+        out %al,$NMI_EN_PORT
+.endm
 
 
 #-----------------------------------------------
 # macro: RESET_CPU
 # description:
-#                引发处理器产生 RESET# 信号
+#                Generate RESET# signal
 #-----------------------------------------------
-.macro RESET_CPU 0
-        mov dx, RESET_CONTROL_REGISTER                         # reset 控制寄存器在端口 0CF9H
-        in al, dx
-        or al, 3                                                # 执行硬件 RESET 动作
-        out dx, al
-.endmacro
+.macro RESET_CPU
+        mov $RESET_CONTROL_REGISTER,%dx                         # reset control register port 0CF9H
+        in %dx,%al
+        or $0x3,%al                                                #
+        out %al,%dx
+.endm
 
 
 #---------------------------------------------
 # macro INIT_CPU
 # description:
-#                引发处理器产生 INIT# 信号
+#                Generate INIT# signal
 #----------------------------------------------
-.macro INIT_CPU 0
-        mov dx, FAST_A20_INIT_REGISTER                        # port 92
-        in al, dx
-        or al, 1                                              # INIT_NOW
-        out dx, al
-.endmacro
+.macro INIT_CPU
+        mov FAST_A20_INIT_REGISTER,%dx                        # port 92
+        in %dx, %al
+        or $0x1,%al                                              # INIT_NOW
+        out %al,%dx
+.endm
 
 
-.macro DELAY 0
-        mov ecx, 0xffff
-%%L1:        dec ecx        
+.macro DELAY
+        mov $0xffff,%ecx
+%%L1:   dec %ecx        
         jnz %%L1        
-.endmacro
+.endm
 
 
-.macro DELAY1 0
-        mov ecx, 0xffffffff
-%%L1:        dec ecx        
+.macro DELAY1
+        mov $0xffffffff, %ecx
+%%L1:   dec %ecx        
         jnz %%L1        
-.endmacro
+.endm
 
 
 
