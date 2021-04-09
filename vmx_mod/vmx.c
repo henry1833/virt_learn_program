@@ -9,7 +9,7 @@
 #include<linux/uaccess.h>
 #include<linux/mman.h>
 #include<asm/desc.h>
-#include<asm/svm.h>
+#include<asm/vmx.h>
 #include<asm/special_insns.h>
 #include<asm/msr-index.h>
 
@@ -257,23 +257,64 @@ static void reload_tss(void)
 #define Q "l"
 #endif
 
-int vmx_run(struct vmx_vcpu *vcpu)
+int vmx_run(struct vmx_vcpu *vmx)
 {
     
    asm(" \n"
-       "mov [ax],%%"R"ax\n"
-       "push %%r14,%%"R"bx\n"
-       "push %%r13,%%"R"cx\n"
-       "push %%r12,%%"R"dx \n"
+	   "mov %c[ax](%0),%%"R"ax \n\t"
+	   "mov %c[bx](%0),%%"R"bx \n\t"
+	   "mov %c[dx](%0),%%"R"dx \n\t"
+	   "mov %c[si](%0),%%"R"si \n\t"
+	   "mov %c[di](%0),%%"R"di \n\t"
+	   "mov %c[bp](%0),%%"R"bp \n\t"
 #ifdef CONFIG_X86_64
-#else
+	   "mov %c[r8](%0),%%r8 \n\t"
+	   "mov %c[r9](%0),%%r9 \n\t"
+	   "mov %c[r10](%0),%%r10 \n\t"
+	   "mov %c[r11](%0),%%r11 \n\t"
+	   "mov %c[r12](%0),%%r12 \n\t"
+	   "mov %c[r13](%0),%%r13 \n\t"
+	   "mov %c[r14](%0),%%r14 \n\t"
+	   "mov %c[r15](%0),%%r15 \n\t"
 #endif
-
+	   "mov %c[cx](%0),%%"R"cx\n\t"
+	   
+	   
+	   "mov %%"R"ax, %c[ax](%0) \n\t"
+	   "mov %%"R"bx, %c[bx](%0) \n\t"
+	   "mov %%"R"ax, %c[cx](%0) \n\t"
+	   "mov %%"R"bx, %c[dx](%0) \n\t"
+	   "mov %%"R"ax, %c[si](%0) \n\t"
+	   "mov %%"R"bx, %c[di](%0) \n\t"
+	   "mov %%"R"ax, %c[bp](%0) \n\t"
 #ifdef CONFIG_X86_64
-#else
+	   "mov %%r8, %c[r8](%0) \n\t"
+	   "mov %%r9, %c[r9](%0) \n\t"
+	   "mov %%r10, %c[r10](%0) \n\t"
+	   "mov %%r11, %c[r11](%0) \n\t"
+	   "mov %%r12, %c[r12](%0) \n\t"
+	   "mov %%r13, %c[r13](%0) \n\t"
+	   "mov %%r14, %c[r14](%0) \n\t"
+	   "mov %%r15, %c[r15](%0) \n\t"
 #endif
-   :[]
-   :
+   ::"c"(vmx),
+	[ax]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RAX])),
+	[bx]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RBX])),
+	[cx]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RCX])),
+    [dx]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RDX])),
+	[si]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RSI])),
+	[di]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RDI])),
+	[bp]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RBP])),
+#ifdef CONFIG_X86_64
+	[r8]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R8])),
+	[r9]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R9])),
+	[r10]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R10])),
+	[r11]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R11])),
+	[r12]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R12])),
+	[r13]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R13])),
+	[r14]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R15])),
+	[r15]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R16])),
+#endif
    :);
 
     return ;   
@@ -290,7 +331,7 @@ int svm_launch(struct svm_vcpu *svm)
    
     while(1)
     {
-        reason = svm_run(svm);        
+        reason = vmx_run(svm);        
          
         local_irq_enable();
          
@@ -760,7 +801,7 @@ static struct page *exec_ptr = NULL;
 struct file *filp = NULL;
 unsigned long addr = 0;
 
-static int __init svm_init(void)
+static int __init vmx_init(void)
 {
     int ret;
 //    struct file *filp;
@@ -839,7 +880,7 @@ out:
     return -1;
 }
 
-static void __exit svm_exit(void)
+static void __exit vmx_exit(void)
 {
     printk("module exit\n");
 	
@@ -877,7 +918,7 @@ static void __exit svm_exit(void)
 */
 }
 
-module_init(svm_init);
-module_exit(svm_exit);
+module_init(vmx_init);
+module_exit(vmx_exit);
 
 MODULE_LICENSE("GPL");

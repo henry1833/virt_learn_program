@@ -96,7 +96,7 @@ enum x86_reg {
 };
 
 
-struct svm_vcpu{
+struct vmx_vcpu{
 
     int asid;    
  
