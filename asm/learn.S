@@ -1,5 +1,5 @@
 .include "system_data.h"
-#.include "page.h"
+.include "page.h"
 .include "CPU.h"
 
 BASE            =   0x7c00
@@ -84,7 +84,7 @@ entry32:
 #open XD function
 #    call execution_disable_enable
 
-#    mov $PML4T_BASE,%eax
+    mov $PML4T_BASE,%eax
 	mov %eax,%cr3
 	
 
@@ -123,7 +123,7 @@ entry64:
     mov %ax,%ds
     mov %ax,%es
     mov %ax,%ss
-#    mov %rsp, $PROCESSOR0_KERNEL_RSP	
+    mov $PROCESSOR0_KERNEL_RSP ,%rsp	
 #    mov GP_HANDLER_VECTOR, %rsi
 #	mov GP_handler,%rdi
 #	call set_interrupt_handler

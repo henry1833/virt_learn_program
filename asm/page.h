@@ -4,119 +4,116 @@
 
 
 .ifndef PAGE_INC
-.define PAGE_INC
 
 
-#*** 32-bit paging 下 ***
-.define PDT32_BASE              100000h
+#*** 32-bit paging base address ***
+.equ PDT32_BASE        ,      0x100000
 
-#*** PAE paging 下 ***
-.define PDPT_BASE               100000h
-
-
-# IA-32e paging 下
-.define PML4T_BASE              200000h
-.define INIT_SEG                0FFFFFFF800000000h
+#*** PAE paging base address ***
+.equ PDPT_BASE         ,      0x100000
 
 
-## 定义 table entry 位
-
-.define P                       1
-.define RW                      2
-.define US                      4
-.define PWT                     8
-.define PCD                     10h
-.define A                       20h
-.define D                       40h
-.define PS                      80h
-.define G                       100h
-.define PAT                     1000h
-.define XD                      80000000h
+# IA-32e paging base address
+.equ PML4T_BASE        ,      0x200000
+.equ INIT_SEG          ,      0x0FFFFFFF800000000
 
 
-## 未开启分页时 user stack
-.define USER_ESP                08FF0h
+## define  table entry control bit filed
 
-## 为每个 logical processor 定义自己的 stack pointer
-PROCESSOR0_ESP                        equ        0x3ff000
-PROCESSOR1_ESP                        equ        0x3fe000
-PROCESSOR2_ESP                        equ        0x3fd000
-PROCESSOR3_ESP                        equ        0x3fc000
+.equ P                 ,      0x1
+.equ RW                ,      0x2
+.equ US                ,      0x4
+.equ PWT               ,      0x8
+.equ PCD               ,      0x10
+.equ A                 ,      0x20
+.equ D                 ,      0x40
+.equ PS                ,      0x80
+.equ G                 ,      0x100
+.equ PAT               ,      0x1000
+.equ XD                ,      0x80000000
 
 
-#* 每个处理器使用的 stack 缺省为 2K 大小
-.define PROCESSOR_STACK_SIZE            800h
+## Use user stack when off paging
+.equ USER_ESP          ,      0x08FF0
+
+## each logical processor has themself stack pointer
+.equ PROCESSOR0_ESP                        ,        0x3ff000
+.equ PROCESSOR1_ESP                        ,        0x3fe000
+.equ PROCESSOR2_ESP                        ,        0x3fd000
+.equ PROCESSOR3_ESP                        ,        0x3fc000
+
+
+# The default stack size is 2K
+.equ PROCESSOR_STACK_SIZE   ,         0x800
 
 
 #** 开启分页后 ***
 # 32位保护模式下的 kernel stack
 
 #--------------------------------------------------------------------------------------------------------
-# 为每个 logical 处理器定义各自 kernel stack  pointer
-# 分配方法：根据处理器 index 值来分配，每个处理器缺省使用 2K stack
-# 例如：
+# Every logical cpu define themself kernel stack  pointer
 #      processor #0 = PROCESSOR_KERNEL_ESP + PROCESSOR_STACK_SIZE + (PROCESSOR_STACK_SIZE * 0)
 #      processor #1 = PROCESSOR_KERNEL_ESP + PROCESSOR_STACK_SIZE + (PROCESSOR_STACK_SIZE * 1)
 #      processor #2 = PROCESSOR_KERNEL_ESP + PROCESSOR_STACK_SIZE + (PROCESSOR_STACK_SIZE * 2)
 #      processor #3 = PROCESSOR_KERNEL_ESP + PROCESSOR_STACK_SIZE + (PROCESSOR_STACK_SIZE * 3)
 #------------------------------------------------------------------------------------------------------------
-.define PROCESSOR_KERNEL_ESP            0FFE00800h
+.equ PROCESSOR_KERNEL_ESP    ,        0x0FFE00800
 
-# 用于中断 handler 的 RSP
-.define PROCESSOR_IDT_ESP               0FFE04800h
+# use for interrupt handler RSP
+.equ PROCESSOR_IDT_ESP       ,        0x0FFE04800
 
 # user stack
-.define PROCESSOR_USER_ESP              7FE00800h
+.equ PROCESSOR_USER_ESP      ,        0x7FE00800
 
 
 .ifdef NON_PAGING
-        .define USER_ESP                08FF0h
-        .define KERNEL_ESP              3FF000h
+        .equ USER_ESP         ,       0x08FF0
+        .equ KERNEL_ESP       ,       0x3FF000
 .else
-        .define USER_ESP                (PROCESSOR_USER_ESP)
-        .define KERNEL_ESP              (PROCESSOR_KERNEL_ESP)
+        .equ USER_ESP         ,       (PROCESSOR_USER_ESP)
+        .equ KERNEL_ESP       ,       (PROCESSOR_KERNEL_ESP)
 .endif
 
 
 
-# 64-bit 模式下的
-.define SYSTEM_DATA64_BASE              0FFFFFFF800000000h
+# 64-bit mode
+.equ SYSTEM_DATA64_BASE       ,       0x0FFFFFFF800000000
 
-# 下面使用于 compatibility 模式下
-.define COMPATIBILITY_USER_ESP          018FF0h
-.define COMPATIBILITY_KERNEL_ESP        0FFE003F0h
-.define LIB32_ESP                       0FFE01FF0h
+#  uesed for compatibility mode
+.equ COMPATIBILITY_USER_ESP    ,      0x018FF0
+.equ COMPATIBILITY_KERNEL_ESP  ,      0x0FFE003F0
+.equ LIB32_ESP                 ,      0x0FFE01FF0
 
 
-# 64-bit 模式下的 kernel stack
+# 64-bit mode kernel stack
 #
-.define PROCESSOR_KERNEL_RSP            0FFFFFFFFFFE00800h
-.define PROCESSOR0_KERNEL_RSP           0FFFFFFFFFFE00800h
+.equ PROCESSOR_KERNEL_RSP      ,      0x0FFFFFFFFFFE00800
+.equ PROCESSOR0_KERNEL_RSP     ,      0x0FFFFFFFFFFE00800
 
-# 用于中断 handler 的 RSP
-.define PROCESSOR_IDT_RSP               0FFFFFFFFFFE04800h
-.define PROCESSOR0_IDT_RSP              0FFFFFFFFFFE04800h
+# used for interrupt handler  RSP
+.equ PROCESSOR_IDT_RSP         ,      0x0FFFFFFFFFFE04800
+.equ PROCESSOR0_IDT_RSP        ,      0x0FFFFFFFFFFE04800
 
-# 用于 sysenter 指令 RSP
-.define PROCESSOR_SYSENTER_RSP          0FFFFFFFFFFE08800h
-
-
-# 用于 syscall 指令 RSP
-.define PROCESSOR_SYSCALL_RSP           0FFFFFFFFFFE0C800h
+# used for sysenter  RSP
+.equ PROCESSOR_SYSENTER_RSP    ,      0x0FFFFFFFFFFE08800
 
 
-# 用于 IST 表 RSP 值
-.define PROCESSOR_IST1_RSP              0FFFFFFFFFFE10800h
-.define PROCESSOR0_IST1_RSP             0FFFFFFFFFFE10800h
+# used for syscall  RSP
+.equ PROCESSOR_SYSCALL_RSP     ,      0x0FFFFFFFFFFE0C800
 
 
-# 64-bit 模式下的 user stack
-.define PROCESSOR_USER_RSP              00007FFFFFE00800h
+# used for IST table RSP value
+.equ PROCESSOR_IST1_RSP        ,      0x0FFFFFFFFFFE10800
+.equ PROCESSOR0_IST1_RSP       ,      0x0FFFFFFFFFFE10800
+
+
+# 64-bit mode user stack
+.equ PROCESSOR_USER_RSP        ,      0x00007FFFFFE00800
 
 
 
-.define USER_RSP                        (PROCESSOR_USER_RSP)
-.define KERNEL_RSP                      (PROCESSOR_KERNEL_RSP)
+.equ USER_RSP                  ,      (PROCESSOR_USER_RSP)
+.equ KERNEL_RSP                ,      (PROCESSOR_KERNEL_RSP)
 
 
 .endif
