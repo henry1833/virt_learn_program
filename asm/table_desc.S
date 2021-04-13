@@ -130,4 +130,20 @@ __test_tss_end:
 
 system_data64_end:
 
+		.align 8
+gdt_pointer32:
+       .word      (__global_descriptor_table_end - __global_descriptor_table) - 1
+       .long      __global_descriptor_table
+idt_pointer32:
+       .word      (__interrupt_descriptor_table_end - __interrupt_descriptor_table) - 1
+       .long       __interrupt_descriptor_table
 
+
+       .align 8
+gdt_pointer64:
+       .word      (__global_descriptor_table_end - __global_descriptor_table) - 1
+       .quad      __global_descriptor_table
+
+idt_pointer64:
+       .word      (__interrupt_descriptor_table_end - __interrupt_descriptor_table) - 1
+       .quad       __interrupt_descriptor_table

@@ -47,9 +47,6 @@
 .equ PROCESSOR_STACK_SIZE   ,         0x800
 
 
-#** 开启分页后 ***
-# 32位保护模式下的 kernel stack
-
 #--------------------------------------------------------------------------------------------------------
 # Every logical cpu define themself kernel stack  pointer
 #      processor #0 = PROCESSOR_KERNEL_ESP + PROCESSOR_STACK_SIZE + (PROCESSOR_STACK_SIZE * 0)
