@@ -8,6 +8,7 @@
 #include<linux/slab.h>
 #include<linux/uaccess.h>
 #include<linux/mman.h>
+#include<linux/cpu.h>
 #include<asm/desc.h>
 #include<asm/vmx.h>
 #include<asm/special_insns.h>
@@ -15,12 +16,8 @@
 
 #include "svmb.h"
 
-int cpu;
+static DEFINE_PER_CPU(struct vmcs *,vmxarea);
 
-#define MSR_INVALID                     0xffffffffU
-
-#define IOPM_ALLOC_ORDER 2
-#define MSRPM_ALLOC_ORDER 1
 
 static void vmx_dump_sel(char *name,uint32_t sel)
 {
@@ -699,141 +696,40 @@ int svm_config_init(struct svm_config *conf)
      return 0;
 }
 
-struct page *save_host_area = NULL;
-struct svm_vcpu *svp;
+cpumask_t cpu_vmx_enabled;
 
-int svm_hardware_enable(void)
+int vmx_hardware_enable(void)
 {
-    uint64_t efer;
-    struct page *iopm_pages = NULL,*msrpm_pages = NULL;
-    void *iopm_va;
-    
-
-    rdmsrl(MSR_EFER,efer);
-    if(efer & EFER_SVME)
-    {
-        printk("EFER_SVME has set\n");
-        return -EBUSY;
-    }
-
-    save_host_area = alloc_page(GFP_KERNEL);
-
-    wrmsrl(MSR_EFER, efer| EFER_SVME);
-    wrmsrl(MSR_VM_HSAVE_PA,page_to_pfn(save_host_area) << PAGE_SHIFT);   
-
-    svp = kmalloc(sizeof(struct svm_vcpu),GFP_KERNEL|__GFP_ZERO);
-    if(svp == NULL)
-    {
-        printk("kmalloc failed\n");
-        return -ENOMEM;
-    }    
-    
-    svp->gdtr = kmalloc(sizeof(struct gdt_page),GFP_KERNEL|__GFP_ZERO);
-    if(svp->gdtr == NULL){
-        printk("kmalloc gdtr failed\n");
-        goto out;
-    }
-
-    svp->vmcb = page_address(alloc_page(GFP_KERNEL_ACCOUNT|__GFP_ZERO));
-    
-    svp->vmcb_pa = virt_to_phys(svp->vmcb);  
-
-    iopm_pages = alloc_pages(GFP_KERNEL, IOPM_ALLOC_ORDER);
-
-    if (!iopm_pages)
-        goto out1;
-
-    svp->io_bitmap  = page_address(iopm_pages);
-
-    memset(svp->io_bitmap, 0xff, PAGE_SIZE * (1 << IOPM_ALLOC_ORDER));
-
-    msrpm_pages = alloc_pages(GFP_KERNEL, MSRPM_ALLOC_ORDER);
-    if (!msrpm_pages)
-        goto out2;
-
-    svp->msrpm = page_address(msrpm_pages);
-
-    memset(svp->msrpm, 0xff, PAGE_SIZE * (1 << MSRPM_ALLOC_ORDER));
-
-#ifdef CONFIG_X86_64
-    set_msr_interception(svp->msrpm, MSR_FS_BASE, 1, 1);
-    set_msr_interception(svp->msrpm, MSR_GS_BASE, 1, 1);
-    set_msr_interception(svp->msrpm, MSR_KERNEL_GS_BASE, 1, 1);
-    set_msr_interception(svp->msrpm, MSR_EFER, 1, 1);
-#endif
-
-
-    return 0;
-
-out2:
-    __free_pages(msrpm_pages, MSRPM_ALLOC_ORDER);
-out1:
-    __free_pages(pfn_to_page((unsigned long)svp->io_bitmap >> PAGE_SHIFT), IOPM_ALLOC_ORDER);
-out:
-    kfree(svp);
-    return -ENOMEM;
+    int cpu = raw_smp_processor_id();
+    u64 phys_addr = __pa(per_cpu(vmxarea,cpu));
+	
+	if(cr4_read_shadow() & X86_CR4_VMXE)
+		return -EBUSY;
+	
+	
+	
+	return 0;
 }
 
-int svm_hardware_disable(void)
+int vmx_hardware_disable(void)
 {
-    uint64_t efer;
- 
-    wrmsrl(MSR_VM_HSAVE_PA,0);    
-
-    rdmsrl(MSR_EFER,efer);
-    wrmsrl(MSR_EFER, efer & ~EFER_SVME);
-    
-    __free_page(save_host_area);
-
-    free_page((unsigned long)(svp->vmcb));
-
-    __free_pages(pfn_to_page((unsigned long)svp->io_bitmap >> PAGE_SHIFT), IOPM_ALLOC_ORDER);
+    int cpu;
     return 0;
 
 }
 
 
 
-static char *filename= "/home/higon/module/svm_mod/guest";
 
-static struct svm_config *conf = NULL;
-static struct page *exec_ptr = NULL;
-struct file *filp = NULL;
 unsigned long addr = 0;
 
 static int __init vmx_init(void)
 {
-    int ret;
-//    struct file *filp;
-//    unsigned long addr;
-    loff_t pos = 0;
 
-// alloc memory for need struct
-    conf = kmalloc(sizeof(struct svm_config),__GFP_ZERO |GFP_KERNEL);
-    if(conf == NULL){
-        printk("alloc config failed\n");
-        return -1;
-     }
+   memset(&cpu_vmx_enabled,0,sizeof(cpumask_t));
+//enable hardware support vmx; 
+   on_each_cpu(vmx_hardware_enable,null,1);
 
-/*	
-    svm = kmalloc(sizeof(struct svm_vcpu),GFP_KERNEL| __GFP_ZERO);  
-    if(svm == NULL) {
-        printk("alloc svm_vcpu \n");
-        return -1;
-    }
-*/
-	
-//enable hardware support svm; 
-    ret = svm_hardware_enable();
-    if(ret)
-    {
-        kfree(conf);
-        return ret;
-    }
-
-// read 
-    cpu = smp_processor_id();   
-//    filp = open_exec(filename); 
    filp = filp_open(filename,O_RDONLY,0); 
     if(IS_ERR(filp))
     {
@@ -850,18 +746,6 @@ static int __init vmx_init(void)
         goto out;
     }
 
-/*
-    exec_ptr = alloc_page(GFP_KERNEL);
-    addr = page_address(exec_ptr);
-    if((void *)addr == NULL)
-    {
-        printk("addrees is NULL\n");
-        goto out;     
-    }
-    ret = kernel_read(filp,(void *)addr,4096,&pos); 
-
-    filp_close(filp,NULL);
-*/
     svm_config_init(conf);
 	
     conf->svm_user_regs.rip = addr;
@@ -869,9 +753,9 @@ static int __init vmx_init(void)
     conf->svm_user_regs.rflags = (1 << 1);
 	
     setup_guest_regs(svp, conf);
-    svm_init_vmcb(svp);
+    vmx_init_vmcb(svp);
 
-    svm_launch(svp);
+    vmx_launch(svp);
      
     return 0;
 
@@ -884,7 +768,7 @@ static void __exit vmx_exit(void)
 {
     printk("module exit\n");
 	
-    svm_hardware_disable();
+    on_each_cpu(vmx_hardware_enable);
 	
     if(conf != NULL)
     {
