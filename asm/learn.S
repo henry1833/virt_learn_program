@@ -40,33 +40,38 @@ _start:
 .fill 510-(.-_start),1,0
 boot_magic: .byte 0x55,0xaa
 
-.fill 16,1,0
+#.fill 16,1,0
 
-.include "table_desc.S"
+
 		
 .section .text.protected_mode
 		.code32
 entry32:
 ##set protected mode run environment
 ##
-
+	mov $data32_sel, %ax
+	mov %ax,%ds
+	mov %ax,%ss
+	mov $entry32,%esp
+	
+	lgdt gdt_pointer64
+	lidt idt_pointer64
 ##open SSE instruction set
     mov %cr4, %eax
 	bts $0x9, %eax
 	mov %eax, %cr4
+
+#set page PAE
+    call pae_enable	
 	
 #init paging environment
     call init_paging
-
-#set page PAE
-    call pae_enable
-
-
+	
     mov $PML4T_BASE,%eax
 	mov %eax,%cr3	
 
 #set EFER register EFER.LME = 1
-    mov IA32_EFER,%ecx
+    mov $IA32_EFER,%ecx
 	rdmsr
 	bts $8,%eax
 	wrmsr
@@ -79,7 +84,9 @@ entry32:
 	jmp $kernel_code64_sel,$entry64 
 
 #define 32-bit gdt entry
-
+    .align 16
+.include "table_desc.S"
+    .align 16
 .include "page64.S"
 
 .section .text.long_mode		

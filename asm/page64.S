@@ -47,9 +47,9 @@ clear_4k_pages_done:
        
 bsp_init_page:
 init_paging:
-	mov IA32_APIC_BASE,%ecx
+	mov $IA32_APIC_BASE,%ecx
 	rdmsr
-	bt %eax,8
+	bt $8,%eax
 	jnc init_page_done
 	
 	mov $0x200000,%esi
@@ -133,7 +133,7 @@ init_paging:
 	movl $(0x412000|RW|P),(0x208000)
     movl $0, (0x208004)
 	
-#	movl $(0x413000|PW|P),(0x205000 + 8*1)
+	movl $(0x413000|RW|P),(0x205000 + 8*1)
 	movl $XD, (0x208000 + 1*8 + 4)
 	
 init_page_done:
