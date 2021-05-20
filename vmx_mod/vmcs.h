@@ -99,27 +99,14 @@ enum x86_reg {
 struct vmx_vcpu{
 
     int asid;    
- 
     u64 regs[NR_REGS];
-    struct {
-        u16 fs;
-        u16 gs;
-        u16 ldt;
-        u64 gs_base;
-    } host_state;
-   
-    u64 host_msrs[NR_SVM_MSR];
-    u64 guest_msrs[NR_SVM_MSR];
-
-    unsigned long cr2;
-    unsigned long vmcb_pa;
-    struct vmcb *vmcb;    
     
-    u32 *msrpm;
-    u32 *io_bitmap;
-    
+	u8 fail;
+    u32 exit_reason;
+	bool launched;
+	
+	
     struct  gdt_page *gdtr;
-
 };
 
 struct segment{
