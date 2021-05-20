@@ -14,9 +14,18 @@
 #include<asm/special_insns.h>
 #include<asm/msr-index.h>
 
-#include "svmb.h"
+#include "vmcs.h"
 
 static DEFINE_PER_CPU(struct vmcs *,vmxarea);
+
+
+static noinline void vmwrite_error(unsigned long field, unsigned long value)
+{
+        printk(KERN_ERR"vmwrite error: reg %lx value %lx (err %d)",
+                   field, value, vmcs_read32(VM_INSTRUCTION_ERROR));
+        dump_stack(); 
+}
+
 
 
 static void vmx_dump_sel(char *name,uint32_t sel)
@@ -254,65 +263,98 @@ static void reload_tss(void)
 #define Q "l"
 #endif
 
+#define regs_offset(TYPE, MEMBER)  ((size_t)(((TYPE*)0)+MEMBER))
+
+
+static int   __vmx_run_vcpu(struct vmx_vcpu *vmx, u64 *regs,bool launched)
+{
+	    int fail=0;
+        asm volatile("\n\t"
+           "push %[vmx] \n\t"
+           "push %[regs] \n\t"
+           "push %[regs] \n\t"
+           "cmp %%"R"sp, %c[host_rsp](%0) \n\t"
+           "je 1f\n\t"
+           "mov %%"R"sp, %c[host_rsp](%0) \n\t"
+           "vmwrite %%rsp,%%rdx \n\t"
+           "1: \n\t"
+           "mov (%%"R"sp), %%"R"ax \n\t"
+           "cmp $0, %[launched] \n\t"
+           "mov %c[cx](%%"R"ax), %%"R"cx\n\t"
+           "mov %c[dx](%%"R"ax), %%"R"dx \n\t"
+           "mov %c[bx](%%"R"ax), %%"R"bx \n\t"
+           "mov %c[si](%%"R"ax), %%"R"si \n\t"
+           "mov %c[di](%%"R"ax), %%"R"di \n\t"
+           "mov %c[bp](%%"R"ax), %%"R"bp \n\t"
+#ifdef CONFIG_X86_64
+           "mov %c[r8](%%"R"ax), %%r8 \n\t"
+           "mov %c[r9](%%"R"ax), %%r9 \n\t"
+           "mov %c[r10](%%"R"ax), %%r10 \n\t"
+           "mov %c[r11](%%"R"ax), %%r11 \n\t"
+           "mov %c[r12](%%"R"ax), %%r12 \n\t"
+           "mov %c[r13](%%"R"ax), %%r13 \n\t"
+           "mov %c[r14](%%"R"ax), %%r14 \n\t"
+           "mov %c[r15](%%"R"ax), %%r15 \n\t"
+#endif
+           "mov %c[ax](%%"R"ax), %%"R"ax \n\t"
+
+           "jne .Llaunched \n\t"
+           "vmlaunch \n\t"
+           "jmp .Lkvm_vmx_return \n\t"
+           ".Llaunched: vmresume \n\t"
+           ".Lkvm_vmx_return: "
+
+           "mov %%"R"ax, %c[wordsize](%%"R"sp)\n\t"
+           "pop %%"R"ax \n\t"
+           "pop %c[ax](%%"R"ax) \n\t"
+           "mov %%"R"cx, %c[cx](%%"R"ax) \n\t"
+           "mov %%"R"dx, %c[dx](%%"R"ax) \n\t"
+           "mov %%"R"bx, %c[bx](%%"R"ax) \n\t"
+           "mov %%"R"si, %c[si](%%"R"ax) \n\t"
+           "mov %%"R"di, %c[di](%%"R"ax) \n\t"
+           "mov %%"R"bp, %c[bp](%%"R"ax) \n\t"
+#ifdef CONFIG_X86_64
+           "mov %%r8, %c[r8](%%"R"ax) \n\t"
+           "mov %%r9, %c[r9](%%"R"ax) \n\t"
+           "mov %%r10, %c[r10](%%"R"ax) \n\t"
+           "mov %%r11, %c[r11](%%"R"ax) \n\t"
+           "mov %%r12, %c[r12](%%"R"ax) \n\t"
+           "mov %%r13, %c[r13](%%"R"ax) \n\t"
+           "mov %%r14, %c[r14](%%"R"ax) \n\t"
+           "mov %%r15, %c[r15](%%"R"ax) \n\t"
+#endif
+           "setbe %[fail] \n\t"
+           "pop %[vmx] \n\t"
+    ::[vmx]"r"(vmx),[regs]"r"(regs),
+        [launched]"r"(launched), "d"((unsigned long)HOST_RSP),
+        [host_rsp]"i"(offsetof(struct vmx_vcpu,host_rsp)),
+        [ax]"i"(regs_offset(u64, VCPU_REGS_RAX)),
+        [bx]"i"(regs_offset(u64, VCPU_REGS_RBX)),
+        [cx]"i"(regs_offset(u64, VCPU_REGS_RCX)),
+        [dx]"i"(regs_offset(u64, VCPU_REGS_RDX)),
+        [si]"i"(regs_offset(u64, VCPU_REGS_RSI)),
+        [di]"i"(regs_offset(u64, VCPU_REGS_RDI)),
+        [bp]"i"(regs_offset(u64, VCPU_REGS_RBP)),
+#ifdef CONFIG_X86_64
+        [r8]"i"(regs_offset(u64, VCPU_REGS_R8)),
+        [r9]"i"(regs_offset(u64, VCPU_REGS_R9)),
+        [r10]"i"(regs_offset(u64, VCPU_REGS_R10)),
+        [r11]"i"(regs_offset(u64, VCPU_REGS_R11)),
+        [r12]"i"(regs_offset(u64, VCPU_REGS_R12)),
+        [r13]"i"(regs_offset(u64, VCPU_REGS_R13)),
+        [r14]"i"(regs_offset(u64, VCPU_REGS_R14)),
+        [r15]"i"(regs_offset(u64, VCPU_REGS_R15)),
+#endif
+        [fail]"m"(fail),
+        [wordsize]"i"(sizeof(ulong))
+      :"cc");
+      return fail;
+}
+	
 int vmx_run(struct vmx_vcpu *vmx)
 {
     
-   asm(" \n"
-	   "mov %c[ax](%0),%%"R"ax \n\t"
-	   "mov %c[bx](%0),%%"R"bx \n\t"
-	   "mov %c[dx](%0),%%"R"dx \n\t"
-	   "mov %c[si](%0),%%"R"si \n\t"
-	   "mov %c[di](%0),%%"R"di \n\t"
-	   "mov %c[bp](%0),%%"R"bp \n\t"
-#ifdef CONFIG_X86_64
-	   "mov %c[r8](%0),%%r8 \n\t"
-	   "mov %c[r9](%0),%%r9 \n\t"
-	   "mov %c[r10](%0),%%r10 \n\t"
-	   "mov %c[r11](%0),%%r11 \n\t"
-	   "mov %c[r12](%0),%%r12 \n\t"
-	   "mov %c[r13](%0),%%r13 \n\t"
-	   "mov %c[r14](%0),%%r14 \n\t"
-	   "mov %c[r15](%0),%%r15 \n\t"
-#endif
-	   "mov %c[cx](%0),%%"R"cx\n\t"
-	   
-	   
-	   "mov %%"R"ax, %c[ax](%0) \n\t"
-	   "mov %%"R"bx, %c[bx](%0) \n\t"
-	   "mov %%"R"ax, %c[cx](%0) \n\t"
-	   "mov %%"R"bx, %c[dx](%0) \n\t"
-	   "mov %%"R"ax, %c[si](%0) \n\t"
-	   "mov %%"R"bx, %c[di](%0) \n\t"
-	   "mov %%"R"ax, %c[bp](%0) \n\t"
-#ifdef CONFIG_X86_64
-	   "mov %%r8, %c[r8](%0) \n\t"
-	   "mov %%r9, %c[r9](%0) \n\t"
-	   "mov %%r10, %c[r10](%0) \n\t"
-	   "mov %%r11, %c[r11](%0) \n\t"
-	   "mov %%r12, %c[r12](%0) \n\t"
-	   "mov %%r13, %c[r13](%0) \n\t"
-	   "mov %%r14, %c[r14](%0) \n\t"
-	   "mov %%r15, %c[r15](%0) \n\t"
-#endif
-   ::"c"(vmx),
-	[ax]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RAX])),
-	[bx]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RBX])),
-	[cx]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RCX])),
-    [dx]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RDX])),
-	[si]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RSI])),
-	[di]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RDI])),
-	[bp]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_RBP])),
-#ifdef CONFIG_X86_64
-	[r8]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R8])),
-	[r9]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R9])),
-	[r10]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R10])),
-	[r11]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R11])),
-	[r12]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R12])),
-	[r13]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R13])),
-	[r14]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R15])),
-	[r15]"i"(offsetof(struct vmx_vcpu, regs[VCPU_REGS_R16])),
-#endif
-   :);
+     vmx->fail = __vmx_run_vcpu(vmx,vmx->regs,vmx->launched);
 
     return ;   
 }
@@ -708,6 +750,7 @@ int vmx_hardware_enable(void)
 	
 	
 	
+	cpumask_set_cpu(smp_processor_id(), &cpu_vmx_enable);
 	return 0;
 }
 
@@ -727,35 +770,11 @@ static int __init vmx_init(void)
 {
 
    memset(&cpu_vmx_enabled,0,sizeof(cpumask_t));
+	
 //enable hardware support vmx; 
    on_each_cpu(vmx_hardware_enable,null,1);
 
-   filp = filp_open(filename,O_RDONLY,0); 
-    if(IS_ERR(filp))
-    {
-        printk("Open file failed :%p\n",filp);
-        goto out;
-    }     
-  
-    addr = vm_mmap(filp, 0, PAGE_SIZE,
-                            PROT_READ| PROT_EXEC,
-                            MAP_EXECUTABLE | MAP_PRIVATE|MAP_POPULATE, 0);
-    if(IS_ERR(addr))
-    {
-        printk("vm_mmap address:0x%lx\n",addr);
-        goto out;
-    }
 
-    svm_config_init(conf);
-	
-    conf->svm_user_regs.rip = addr;
-    conf->svm_user_regs.rsp = read_host_rsp();
-    conf->svm_user_regs.rflags = (1 << 1);
-	
-    setup_guest_regs(svp, conf);
-    vmx_init_vmcb(svp);
-
-    vmx_launch(svp);
      
     return 0;
 
@@ -768,38 +787,8 @@ static void __exit vmx_exit(void)
 {
     printk("module exit\n");
 	
-    on_each_cpu(vmx_hardware_enable);
-	
-    if(conf != NULL)
-    {
-        kfree(conf);
-    }
-	
-    if(svp != NULL)
-    {
-	kfree(svp);
-    }
+    on_each_cpu(vmx_hardware_disable);
 
-    if(svp->gdtr != NULL)
-    {
-        kfree(svp->gdtr);
-    }
-
-    if(addr != 0)
-    {
-        vm_munmap(addr, PAGE_SIZE);       
-    }
-
-    if(filp != NULL){
-        filp_close(filp,NULL);
-    }
-
-/*	
-    if(exec_ptr != NULL)
-    {
-        __free_page(exec_ptr);
-    }
-*/
 }
 
 module_init(vmx_init);
