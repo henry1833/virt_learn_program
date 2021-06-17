@@ -96,7 +96,10 @@ entry64:
     mov %ax,%ds
     mov %ax,%es
     mov %ax,%ss
-    mov $PROCESSOR0_KERNEL_RSP ,%rsp	
+    mov $PROCESSOR0_KERNEL_RSP ,%rsp
+    
+	mov %rbx,(%rsp)
+    push %rax   
 #   mov GP_HANDLER_VECTOR, %rsi
 #	mov GP_handler,%rdi
 #	call set_interrupt_handler
