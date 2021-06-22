@@ -154,7 +154,16 @@ init_paging:
     movl $0,(0x205000+ 8*0x19 + 4)
     movl $(0x20000|RW|US|P),(0x205000 + 8*0x20)
     movl $0,(0x205000+ 8*0x20 + 4)	
-	
+
+#   video memory virtual address 0xb8000 - 0xb9fff mapping 
+#   physical address  0xb8000 - 0xb9fff
+#
+    movl $(0xb8000|RW|US|P),(0x205000 + 0xb8*8)
+	movl $0, (0x205000 + 0xb8*8 +4)
+    movl $(0xb9000|RW|US|P),(0x205000 + 0xb9*8)	
+	movl $0, (0x205000 + 0xb9*8 +4)
+#
+#
 	movl $(0x412000|RW|P),(0x208000)
     movl $0, (0x208004)
 	

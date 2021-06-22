@@ -97,20 +97,24 @@ entry64:
     mov %ax,%es
     mov %ax,%ss
     mov $PROCESSOR0_KERNEL_RSP ,%rsp
+
+
+#set Gdt and Idt
     
-	mov %rbx,(%rsp)
-    push %rax   
-#   mov GP_HANDLER_VECTOR, %rsi
-#	mov GP_handler,%rdi
-#	call set_interrupt_handler
+
+    mov GP_HANDLER_VECTOR, %rsi
+	mov GP_handler,%rdi
+	call set_interrupt_handler
 	
-#	mov PF_HANDLER_VECTOR, %rsi
-#	mov PF_handler,%rdi
-#	call set_interrupt_handler
+	mov PF_HANDLER_VECTOR, %rsi
+	mov PF_handler,%rdi
+	call set_interrupt_handler
 	
-#	mov DB_HANDLER_VECTOR, %rsi
-#	mov DB_handler,%rdi
-#	call set_interrupt_handler
+	mov DB_HANDLER_VECTOR, %rsi
+	mov DB_handler,%rdi
+	call set_interrupt_handler
+	
+	
     push $(USER_SS|0x3)
 	mov  $USER_RSP, %rax
 	push %rax
@@ -120,4 +124,6 @@ entry64:
 
 user_entry: 
     jmp .
+
+.include "libs64.S"
 	
