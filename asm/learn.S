@@ -102,15 +102,15 @@ entry64:
     
 
     mov $GP_HANDLER_VECTOR, %rsi
-	mov GP_handler,%rdi
+	mov $GP_handler,%rdi
 	call set_interrupt_handler
 	
 	mov $PF_HANDLER_VECTOR, %rsi
-	mov PF_handler,%rdi
+	mov $PF_handler,%rdi
 	call set_interrupt_handler
 	
 	mov $DB_HANDLER_VECTOR, %rsi
-	mov DB_handler,%rdi
+	mov $DB_handler,%rdi
 	call set_interrupt_handler
 	
 	mov $0xfffff7c000000,%rax

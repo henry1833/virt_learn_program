@@ -247,7 +247,7 @@ __set_interrupt_handler:
 #input:
 #     %rsi: vector %rdi: handler
 __set_user_interrupt_handler:
-    sidt (idt_pointer)
+    sidt idt_pointer
 	mov  (idt_pointer+2),%rax
 	shl  $4,%rsi
 	mov  %rdi,(%rax,%rsi)
