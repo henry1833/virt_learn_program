@@ -5,6 +5,10 @@ strlen:                    jmp __strlen
 putc:                      jmp __putc
 println:                   jmp __println
 puts:                      jmp __puts
+print_byte_value:          jmp __print_byte_value
+print_word_value:          jmp __print_word_value
+print_dword_value:         jmp __print_dword_value 
+print_qword_value:         jmp __print_qword_value
 set_interrupt_handler:
 set_interrupt_descriptor:  jmp __set_interrupt_handler
 
@@ -31,22 +35,29 @@ __memcpy:
 #
 __get_current_row:
     push %rbx
+	push %rdx
+	mov $0,%rdx
 	mov  video_current,%rax
 	sub $0xb8000,%rax
-	mov $(80*2),
-	div
+	mov $(80*2),%rbx
+	div %rbx
+	pop %rdx
 	pop %rbx
 	ret
 
 #
 #get current column
 #
-__get_current_row:
+__get_current_column:
     push %rbx
+	push %rdx
+	mov $0,%rdx
 	mov  video_current,%rax
 	sub $0xb8000,%rax
-	mov $(80*2),
-	div
+	mov $(80*2),%rbx
+	div %rbx
+	mov %rdx,%rax
+	pop %rdx
 	pop %rbx
 	ret
 
@@ -54,11 +65,11 @@ __get_current_row:
 #write a character to video
 #
 #input:
-#     %esi character
+#     %rsi character
 
 __write_char:
     push %rbx
-	mov video_current,%rbx
+	mov $video_current,%rbx
 	or $0x0f00,%si
 	cmp $0xf0a,%si
 	jnz do_write_char
@@ -81,10 +92,10 @@ do_write_char_done:
 
 #putc: print a char
 #input:
-#      %esi a char
+#      %rsi a char
 #
 __putc:
-    and $0x00ff,%esi
+    and $0x00ff,%rsi
 	call __write_char
 	ret
 
@@ -111,11 +122,12 @@ __printblank:
 #     rsi  string message address
 __puts:
     push %rbx
+	push %rax
 	mov %rsi,%rbx
 	test %rbx,%rbx
 	jz do_puts_done
 
-do_puts_done:
+do_puts_loop:
     mov (%rbx),%al
 	test %al,%al
 	jz do_puts_done
@@ -125,15 +137,103 @@ do_puts_done:
     jmp do_puts_loop	
 	
 do_puts_done:
+    pop %rax
 	pop %rbx
     ret
+
+#--------------------------------------------
+#hex_to_char: 
+#input: 
+#      %rsi: Hex number
+#output:
+#      %rax: char 
+#--------------------------------------------
+number_character:          .asciz "0123456789ABCDEF"
+__hex_to_char:
+    push %rsi
+	push %rbx
+    and $0x0f,%rsi
+	mov $number_character,%rbx
+	movzbq (%rbx,%rsi),%rax
+    pop  %rbx	
+    pop  %rsi
+    ret
+
+#   
+#%rsi:value %rdx: hex count
+#
+__print_hex_by_byte:
+   push %rbx
+   push %rsi
+   mov %rsi,%rbx
+hex_loop:
+   dec %rdx
+   mov %rbx,%rsi
+   mov %dl,%cl
+   shl $2,%cl
+   shr %cl,%rsi
+   call __hex_to_char
+   mov %rax,%rsi   
+   call __putc
+   test %rdx,%rdx
+   jnz hex_loop
+   pop %rsi
+   pop %rbx
+   ret
+
+#------------
+#print one byte
+#input: %rsi
+#------------
+__print_byte_value:
+   push %rdx
+   mov $2,%rdx
+   call __print_hex_by_byte
+   pop %rdx
+   ret
+
+#------------
+#print two byte
+#input: %rsi
+#------------
+
+__print_word_value:
+   push %rdx
+   mov $4,%rdx
+   call __print_hex_by_byte
+   pop %rdx
+   ret
+
+
+#------------
+#print four byte
+#input: %rsi
+#------------
+__print_dword_value:
+   push %rdx
+   mov $8,%rdx
+   call __print_hex_by_byte
+   pop %rdx
+   ret
+
+#------------
+#print eight byte
+#input: %rsi
+#------------
+__print_qword_value:
+    push %rdx
+    mov $16,%rdx
+    call __print_hex_by_byte
+    pop %rdx
+    ret
+
 
 #set interrupt handler
 #
 #input:
 #     %rsi: vector %rdi: handler
 __set_interrupt_handler:
-    sidt [idt_pointer]
+    sidt (idt_pointer)
 	mov  (idt_pointer+2),%rax
 	shl  $4,%rsi
 	mov  %rdi,(%rax,%rsi)
@@ -146,8 +246,8 @@ __set_interrupt_handler:
 #
 #input:
 #     %rsi: vector %rdi: handler
-__set_interrupt_handler:
-    sidt [idt_pointer]
+__set_user_interrupt_handler:
+    sidt (idt_pointer)
 	mov  (idt_pointer+2),%rax
 	shl  $4,%rsi
 	mov  %rdi,(%rax,%rsi)
