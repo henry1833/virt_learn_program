@@ -92,6 +92,8 @@ init_paging:
     movl $(0x204000|RW|US|P),(0x202000 + 0x1e0*8)
 	movl $0,(0x202000 + 0x1e0*8 +4)
 
+    movl $(0x206000|RW|P),(0x204000)
+	movl $0, (0x204004)
     movl $(0x208000|RW|P),(0x204000 + 0x80*8)
 	movl $0,(0x204000 + 0x80*8 + 4)
 
@@ -162,12 +164,24 @@ init_paging:
 	movl $0, (0x205000 + 0xb8*8 +4)
     movl $(0xb9000|RW|US|P),(0x205000 + 0xb9*8)	
 	movl $0, (0x205000 + 0xb9*8 +4)
-#
-#
+
+
+#   virtual address 0xfffffff800000000 - 0xfffffff800001fff (2 4K-page)
+#   mapping physical address 0x410000 - 0x411fff
+    movl $(0x410000|RW|P),(0x206000)
+	movl $0, (0x206004)
+	movl $(0x411000|RW|P),(0x206000 + 8)
+	movl $0, (0x206000 + 1*8 + 4)
+
+
+#   virtual address 0xFFFFFFF810000000  - 0xFFFFFFF810001FFF (4K-page)
+#   mapping physical address 0x412000 -0x412fff
 	movl $(0x412000|RW|P),(0x208000)
     movl $0, (0x208004)
-	
-	movl $(0x413000|RW|P),(0x205000 + 8*1)
+
+#
+#   insterrupt IST1	
+	movl $(0x413000|RW|P),(0x208000 + 8*1)
 	movl $0, (0x208000 + 1*8 + 4)
 	
 #   

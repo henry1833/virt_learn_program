@@ -76,7 +76,7 @@
 # 64-bit mode
 .equ SYSTEM_DATA64_BASE       ,       0x0FFFFFFF800000000
 
-#  uesed for compatibility mode
+#  used for compatibility mode
 .equ COMPATIBILITY_USER_ESP    ,      0x018FF0
 .equ COMPATIBILITY_KERNEL_ESP  ,      0x0FFE003F0
 .equ LIB32_ESP                 ,      0x0FFE01FF0

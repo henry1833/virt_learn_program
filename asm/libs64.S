@@ -9,6 +9,7 @@ print_byte_value:          jmp __print_byte_value
 print_word_value:          jmp __print_word_value
 print_dword_value:         jmp __print_dword_value 
 print_qword_value:         jmp __print_qword_value
+get_byte_hex_string:       jmp __get_byte_hex_string
 set_interrupt_handler:
 set_interrupt_descriptor:  jmp __set_interrupt_handler
 
@@ -227,6 +228,25 @@ __print_qword_value:
     pop %rdx
     ret
 
+#
+#__get_byte_hex_string: convert byte to sting
+#     %rsi: input BYTE value, %rdi: buffer 
+__get_byte_hex_string:
+    push %rcx
+	push %rsi
+	mov %rsi, %rcx
+	shr $4, %rsi
+	call __hex_to_char
+	movb %al,(%rdi)
+	inc %rdi
+	mov %rcx, %rsi
+	call __hex_to_char
+	mov %al, (%rdi)
+	inc %rdi
+	movb $0,(%rdi)
+	pop %rsi
+	pop %rcx
+	ret
 
 #set interrupt handler
 #
