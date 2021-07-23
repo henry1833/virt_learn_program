@@ -16,24 +16,21 @@ _start:
 	mov %ax,%es
 	mov %ax,%ss
 	mov $BASE,%sp
-    sti
-	
-	
+    sti	
+
     call clear_screen
 	call get_driver_parameters
-	movl $70,total_sectors
+	movl $75,total_sectors
     call load_module
 	
-
-
-	lgdt gdt_pointer32 		# load GDT
-		
-	lidt idt_pointer32      # load IDT
+	lgdt gdt_pointer32 		# load GDT	
+#	lidt idt_pointer32      # load IDT
+	
 	
 	mov %cr0,%eax
 	bts $0, %eax            # set cr0.PE, open protected mode 
 	mov %eax,%cr0
-	
+
 	jmp $code32_sel,$entry32
 
 .include "pre_run.S"
@@ -117,9 +114,54 @@ entry64:
 	mov %rax, 2(%rbx)
 	lidt (%rbx)
 
+#set DE handler
+    mov $DE_HANDLER_VECTOR, %rsi
+	mov $DE_handler,%rdi
+	call set_interrupt_handler
+
+#set NMI handler
+    mov $NMI_HANDLER_VECTOR, %rsi
+	mov $NMI_handler,%rdi
+	call set_interrupt_handler
+
+#set OF handler
+    mov $OF_HANDLER_VECTOR, %rsi
+	mov $OF_handler,%rdi
+	call set_interrupt_handler
+
+#set UD handler
+    mov $UD_HANDLER_VECTOR, %rsi
+	mov $UD_handler,%rdi
+	call set_interrupt_handler
+
+#set NM handler
+    mov $NM_HANDLER_VECTOR, %rsi
+	mov $NM_handler,%rdi
+	call set_interrupt_handler
+
+#set DF handler
+    mov $DF_HANDLER_VECTOR, %rsi
+	mov $DF_handler,%rdi
+	call set_interrupt_handler 
+
+#set TS handler
+    mov $TS_HANDLER_VECTOR, %rsi
+	mov $TS_handler,%rdi
+	call set_interrupt_handler 
+
+#set NP handler
+    mov $NP_HANDLER_VECTOR, %rsi
+	mov $NP_handler,%rdi
+	call set_interrupt_handler 
+ 
 #set GP handler
     mov $GP_HANDLER_VECTOR, %rsi
 	mov $GP_handler,%rdi
+	call set_interrupt_handler
+
+#set MC handler
+    mov $MC_HANDLER_VECTOR, %rsi
+	mov $MC_handler,%rdi
 	call set_interrupt_handler
 
 #set PF handler	
@@ -132,14 +174,19 @@ entry64:
 	mov $DB_handler,%rdi
 	call set_interrupt_handler
 
-    mov $IA32_APIC_BASE,%rax
-	rdmsr
-	mov $0xfffff000, %rbx
-	and %rbx, %rax
+#set timer interrupt handler
+    mov  $APIC_TIMER_VECTOR, %rsi
+	mov  apic_timer_handler, %rdi
+    call set_interrupt_handler
+
+	call disable_apic
+    jmp .
+   
+    call enable_apic
+
+    movl $(TIMER_ONE_SHOT|APIC_TIMER_VECTOR),(APIC_BASE + LVT_TIMER)	
+	movl $256, (APIC_BASE + TIMER_ICR)
 	
-	
-	mov $0xfffff7c000000,%rax
-	mov (%rax),%rbx
 	
     push $(USER_SS|0x3)
 	mov  $USER_RSP, %rax
@@ -151,11 +198,14 @@ entry64:
 user_entry: 
     jmp .
 
+
 msg1: .asciz "support local apic: "
 msg2: .asciz "support x2apic    :"
 msg3: .asciz "yes"
 msg4: .asciz "no"
 
+
 .include "handler64.S"
 .include "libs64.S"
 .include "apic64.S"
+

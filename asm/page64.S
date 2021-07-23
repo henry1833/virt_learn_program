@@ -61,6 +61,8 @@ init_paging:
  	mov $0x300000,%esi
 	mov $5, %edi
 	call clear_4k_pages
+
+#   apic:         virtual address 0x800000 map to physica address 0xFEE00000(Local APIC area)
  
     movl $(0x201000|RW|US|P), (0x200000)                 # PML4T[0]
     movl $0x0, 0x200004
