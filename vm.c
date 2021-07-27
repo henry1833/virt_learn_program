@@ -12,6 +12,7 @@
 #include<sys/stat.h>
 #include<sys/types.h>
 #include<errno.h>
+#include<ctype.h>
 
 #define KVM_API_VERSION 12
 
@@ -72,7 +73,8 @@ int parse_argv(int argc,char **argv)
 {
     int c = 0;
     int option_index =0;
-    
+    int i,len,base,val;
+
     while((c = getopt_long(argc,argv,"f:m:hH",long_options,&option_index)) != -1){
         switch(c){
             case 'h':
@@ -80,7 +82,63 @@ int parse_argv(int argc,char **argv)
                 show_usage();
                 break;
             case 'm':
-                vm_memory_size = atoi(optarg); 
+		len = strlen(optarg);
+
+		if(optarg[0]=='0' && optarg[1] =='x'){
+		    base = 0x10;
+		    i = 2;
+		}
+		else{
+		    base = 10;
+		    i = 0;
+		}
+                
+		vm_memory_size = 0;
+		while(i< len){
+		    if(isxdigit(optarg[i]))
+		    {
+			if(optarg[i] >= '0' && optarg[i] <= '9')
+			{
+		            val = optarg[i] - '0';
+			}
+			else if(optarg[i] >= 'A' && optarg[i] < 'F'){
+			    val = optarg[i] - 'A' + 10;
+			}
+			else if(optarg[i] >= 'a' && optarg[i] < 'f'){
+			    val = optarg[i] - 'a' + 10;
+			}
+		        vm_memory_size *= base;
+		        vm_memory_size += val; 	
+		    }else
+		    {
+		        break; 
+		    }
+		    i++;
+		}
+                
+		printf("vm_memory_size:%d\n",vm_memory_size);
+		if(!isalpha(optarg[i]) || isalpha(optarg[i+1])){
+		    printf("Invalid parameter %d\n",i);
+		    return -1;
+		}
+
+		switch(optarg[i]){
+		    case 'K':
+	            case 'k':
+			vm_memory_size *= 0x400;
+			break;
+		    case 'M':
+	            case 'm':
+			vm_memory_size *= 0x100000;
+	                break;
+		    case 'g':
+		    case 'G':
+			vm_memory_size *= 0x40000000;
+			break;
+		    default:
+			printf("Invalid parameter\n");
+			return -1;
+		}
                 break;
             case 'n':
                 cpu_nums = atoi(optarg);
