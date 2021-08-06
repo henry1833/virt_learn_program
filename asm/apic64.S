@@ -127,7 +127,7 @@ dump_tmr:
         mov $tmr, %rsi
         call puts
 		mov $0, %esi
-        mov (APIC_BASE + TMR7), %rsi
+        mov (APIC_BASE + TMR7), %esi
         call print_dword_value
         mov $'_', %rsi
         call putc
@@ -224,8 +224,10 @@ dump_apic:
         call print_dword_value
         mov $icr, %rsi
         call puts
-        mov (APIC_BASE + ICR0),%rsi        
-#        movl (APIC_BASE + ICR1),%rdi        
+        mov (APIC_BASE + ICR0),%esi        
+        mov (APIC_BASE + ICR1),%edi
+        shr $32, %rsi
+		mov %edi, %esi
         call print_qword_value
         call println
         

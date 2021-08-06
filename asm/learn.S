@@ -178,17 +178,15 @@ entry64:
 
 #set timer interrupt handler
     mov  $APIC_TIMER_VECTOR, %rsi
-	mov  apic_timer_handler, %rdi
+	mov  $apic_timer_handler, %rdi
     call set_interrupt_handler
     sti
 
-	call disable_apic
-
-    mov $0x785f5f0000,%rax
-	mov (%rax), %rbx
    
     call enable_apic
-
+    
+	mov (APIC_BASE + APIC_VER), %eax
+	
     movl $(TIMER_ONE_SHOT|APIC_TIMER_VECTOR),(APIC_BASE + LVT_TIMER)	
 	movl $256, (APIC_BASE + TIMER_ICR)
 	
@@ -198,7 +196,7 @@ entry64:
 	push %rax
 	push $(USER_CS|0x3)
 	push $user_entry
-#	retf64
+    retf
 
 user_entry: 
     jmp .

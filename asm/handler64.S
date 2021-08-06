@@ -403,6 +403,7 @@ apic_timer_handler:
 		call println
 		mov $at_msg2, %rsi
 		call puts
+		call println
 		movl $0, (APIC_BASE + EOI) 
         iret
 
