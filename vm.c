@@ -178,31 +178,34 @@ int main(int argc,char **argv)
 		exit(-1);
 	}
     
-    fd = open(argv[1],O_RDWR);
+    fd = open(filename,O_RDWR);
 
     if(fd == -1)
-	err(1,"Open binary fail");
+	    err(1,"Open binary fail");
 
-    vmfd = ioctl(kvm,KVM_CREATE_VM,(unsigned long)0);
+    vmfd = ioctl(ks->fd,KVM_CREATE_VM,(unsigned long)0);
     if(vmfd == -1)
-	err(1,"KVM_CREATE_VM");
+	    err(1,"KVM_CREATE_VM");
 
-    mem = mmap(NULL,0x1000,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+    mem = mmap(NULL,0x40000,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
     if(!mem)
         err(1,"allocating guest memory");
 
-     while((ret=read(fd,buff,255))>0)
-     {
+    ret = read(fd,buff,0x400);
+	memcpy(mem + 0xc00,buff,ret);
+	
+    while((ret=read(fd,buff,4096))>0)
+    {
         memcpy(mem,buff,ret);
-     }
+    }
 
 //    memcpy(mem,code,sizeof(code));
     close(fd);
     struct kvm_userspace_memory_region region = {
         .slot = 0,
-	.guest_phys_addr =0x1000,
-	.memory_size = 0x1000,
-	.userspace_addr = (uint64_t)mem,
+	    .guest_phys_addr =0x7000,
+	    .memory_size = 0x40000,
+	    .userspace_addr = (uint64_t)mem,
     };
 
     ret = ioctl(vmfd,KVM_SET_USER_MEMORY_REGION,&region);
@@ -223,7 +226,7 @@ int main(int argc,char **argv)
 
     mmap_size = ret;
     if(mmap_size < sizeof(*run))
-	err(1,"KVM_GET_VCPU_MMAP_SIZE unexpectedly small");
+	    err(1,"KVM_GET_VCPU_MMAP_SIZE unexpectedly small");
 
     run = mmap(NULL,mmap_size,PROT_READ|PROT_WRITE,MAP_SHARED,vcpufd,0);
     if(!run)
@@ -243,10 +246,10 @@ int main(int argc,char **argv)
 	err(1,"KVM_SET_SREGS");
 
     struct kvm_regs regs = {
-        .rip = 0x1000,
-	.rax = 2,
-	.rbx = 2,
-	.rflags = 0x2,
+        .rip = 0x7c00,
+	    .rax = 0,
+	    .rbx = 0,
+	    .rflags = 0x2,
     };
 
     ret = ioctl(vcpufd,KVM_SET_REGS,&regs);
@@ -256,9 +259,9 @@ int main(int argc,char **argv)
     while(1)
     {
         ret = ioctl(vcpufd,KVM_RUN,NULL);
-	if(ret == -1)
-	    err(1,"KVM_RUN");
-	switch(run->exit_reason){
+	    if(ret == -1)
+	        err(1,"KVM_RUN");
+	    switch(run->exit_reason){
 		case KVM_EXIT_IO:
 		    if(run->io.direction == KVM_EXIT_IO_OUT &&
 				    run->io.size == 1 && run->io.port == 0x3f8
@@ -279,17 +282,17 @@ int main(int argc,char **argv)
 		     break;
 		case KVM_EXIT_FAIL_ENTRY:
 		    errx(1,"KVM_EXIT_FAIL_ENTRY: hardware_entry_failure_reason =0x%llx",
-(unsigned long long)run->fail_entry.hardware_entry_failure_reason);
+                    (unsigned long long)run->fail_entry.hardware_entry_failure_reason);
 
 		case KVM_EXIT_INTERNAL_ERROR:
 		    errx(1,"KVM_EXIT_INTERNAL_ERROR: suberror =0x%llx",
-(unsigned long long)run->internal.suberror);
+                    (unsigned long long)run->internal.suberror);
 
         case KVM_EXIT_HLT:
 	            puts("KVM_EXIT_HLT");
 		    return 0;
 		default:
 		    errx(1,"exit_reason =0x%x",run->exit_reason);
-	}
+	    }
     }
 }
