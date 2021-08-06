@@ -47,6 +47,7 @@ boot_magic: .byte 0x55,0xaa
 entry32:
 ##set protected mode run environment
 ##
+    call disable_timer
 	mov $data32_sel, %ax
 	mov %ax,%ds
 	mov %ax,%ss
@@ -102,6 +103,7 @@ entry64:
 	rep movsb
 	
 #set Gdt and Idt
+    cli
     mov $SYSTEM_DATA64_BASE, %rbx
     add $(gdt_pointer64 - system_data64_entry), %rbx
 	mov $(SYSTEM_DATA64_BASE + (__global_descriptor_table - system_data64_entry)), %rax
@@ -113,7 +115,7 @@ entry64:
 	mov $(SYSTEM_DATA64_BASE + (__interrupt_descriptor_table - system_data64_entry)), %rax
 	mov %rax, 2(%rbx)
 	lidt (%rbx)
-
+	
 #set DE handler
     mov $DE_HANDLER_VECTOR, %rsi
 	mov $DE_handler,%rdi
@@ -178,9 +180,12 @@ entry64:
     mov  $APIC_TIMER_VECTOR, %rsi
 	mov  apic_timer_handler, %rdi
     call set_interrupt_handler
+    sti
 
 	call disable_apic
-    jmp .
+
+    mov $0x785f5f0000,%rax
+	mov (%rax), %rbx
    
     call enable_apic
 

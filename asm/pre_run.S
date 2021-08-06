@@ -139,6 +139,18 @@ read_sector_with_extension:
 		movzx %ah,%ax
 		ret
 
+disable_timer:
+        in $0x21,%al
+		or $0x1,%al
+		out %al,$0x21
+		ret
+
+enable_timer:
+        in $0x21, %al
+		and $0xfe, %al
+		out %al, $0x21
+		ret
+
 		.align 8
 disk_address_packet:
     size:               .byte   0x10    # size of packet
