@@ -10,7 +10,7 @@ print_word_value:          jmp __print_word_value
 print_dword_value:         jmp __print_dword_value 
 print_qword_value:         jmp __print_qword_value
 get_byte_hex_string:       jmp __get_byte_hex_string
-set_interrupt_handler:
+set_interrupt_handler:     
 set_interrupt_descriptor:  jmp __set_interrupt_handler
 
 video_current: .quad 0xb8000
@@ -259,6 +259,7 @@ __set_interrupt_handler:
 	mov  %rdi,(%rax,%rsi)
 	mov  %rdi,4(%rax,%rsi)
     movw $kernel_code64_sel,2(%rax,%rsi)
+	movw $0,4(%rax,%rsi)
 	movb $(0x80|INTERRUPT_GATE64),5(%rax,%rsi)
 	ret
 
@@ -273,6 +274,7 @@ __set_user_interrupt_handler:
 	mov  %rdi,(%rax,%rsi)
 	mov  %rdi,4(%rax,%rsi)
     movw $kernel_code64_sel,2(%rax,%rsi)
+	movw $0,4(%rax,%rsi)
 	movb $(0xE0|INTERRUPT_GATE64),5(%rax,%rsi)
 	ret
 

@@ -24,7 +24,7 @@ _start:
     call load_module
 	
 	lgdt gdt_pointer32 		# load GDT	
-#	lidt idt_pointer32      # load IDT
+	lidt idt_pointer32      # load IDT
 	
 	
 	mov %cr0,%eax
@@ -181,8 +181,7 @@ entry64:
 	mov  $apic_timer_handler, %rdi
     call set_interrupt_handler
     sti
-
-   
+  
     call enable_apic
     
 	mov (APIC_BASE + APIC_VER), %eax
@@ -190,15 +189,17 @@ entry64:
     movl $(TIMER_ONE_SHOT|APIC_TIMER_VECTOR),(APIC_BASE + LVT_TIMER)	
 	movl $256, (APIC_BASE + TIMER_ICR)
 	
-	
+
     push $(USER_SS|0x3)
 	mov  $USER_RSP, %rax
 	push %rax
 	push $(USER_CS|0x3)
 	push $user_entry
-    retf
+    retfq
 
 user_entry: 
+    mov $0x8f999990,%rax
+	mov (%rax),%rbx
     jmp .
 
 

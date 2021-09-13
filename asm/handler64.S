@@ -28,7 +28,7 @@ do_DE_handler:
 #		call puts
 #		call dump_reg64
 		jmp .
-		iret
+		iretq
 demsg1:   .asciz "---> Now, enter #DE handler, occur at: 0x"
 demsg2:   .asciz "error code = 0x"
 demsg3:   .asciz "rsp = 0x"
@@ -63,7 +63,7 @@ do_NMI_handler:
 #		call puts
 #		call dump_reg64
 		jmp .
-		iret
+		iretq
 nmimsg1:   .asciz "---> Now, enter #NMI handler, occur at: 0x"
 nmimsg2:   .asciz "error code = 0x"
 nmimsg3:   .asciz "rsp = 0x"
@@ -99,7 +99,7 @@ do_OF_handler:
 #		call puts
 #		call dump_reg64
 		jmp .
-		iret
+		iretq
 ofmsg1:   .asciz "---> Now, enter #OF handler, occur at: 0x"
 ofmsg2:   .asciz "error code = 0x"
 ofmsg3:   .asciz "rsp = 0x"
@@ -134,7 +134,7 @@ do_UD_handler:
 #		call puts
 #		call dump_reg64
 		jmp .
-		iret
+		iretq
 udmsg1:   .asciz "---> Now, enter #UD handler, occur at: 0x"
 udmsg2:   .asciz "error code = 0x"
 udmsg3:   .asciz "rsp = 0x"
@@ -170,7 +170,7 @@ do_NM_handler:
 #		call puts
 #		call dump_reg64
 		jmp .
-		iret
+		iretq
 nmmsg1:   .asciz "---> Now, enter #NM handler, occur at: 0x"
 nmmsg2:   .asciz "error code = 0x"
 nmmsg3:   .asciz "rsp = 0x"
@@ -189,7 +189,7 @@ do_DF_handler:
 		call print_qword_value
         call println
 		jmp .
-		iret
+		iretq
 dfmsg1: .asciz "---> now, enter #DF handler, occur at: 0x"
 
          .align 8
@@ -222,7 +222,7 @@ do_TS_handler:
 #		call puts
 #		call dump_reg64
 		jmp .
-		iret
+		iretq
 tsmsg1:   .asciz "---> Now, enter #TS handler, occur at: 0x"
 tsmsg2:   .asciz "error code = 0x"
 tsmsg3:   .asciz "rsp = 0x"
@@ -257,7 +257,7 @@ do_NP_handler:
 #		call puts
 #		call dump_reg64
 		jmp .
-		iret
+		iretq
 npmsg1:   .asciz "---> Now, enter #NP handler, occur at: 0x"
 npmsg2:   .asciz "error code = 0x"
 npmsg3:   .asciz "rsp = 0x"
@@ -292,7 +292,7 @@ do_GP_handler:
 #		call puts
 #		call dump_reg64
 		jmp .
-		iret
+		iretq
 gmsg1:   .asciz "---> Now, enter #GP handler, occur at: 0x"
 gmsg2:   .asciz "error code = 0x"
 gmsg3:   .asciz "rsp = 0x"
@@ -329,7 +329,7 @@ do_MC_handler:
 #		call puts
 #		call dump_reg64
 		jmp .
-		iret
+		iretq
 mcmsg1:   .asciz "---> Now, enter #MC handler, occur at: 0x"
 mcmsg2:   .asciz "error code = 0x"
 mcmsg3:   .asciz "rsp = 0x"
@@ -358,7 +358,7 @@ PF_handler:
         call print_qword_value
         call println
         jmp . 
-        iret
+        iretq
 		
 pf_msg1: .ascii "\10>>> Now, enter #PF handler\10\0"
 pf_msg2: .asciz ">>>>>>> occur at: 0x"       
@@ -387,7 +387,7 @@ do_db_handler_done:
         btsl $16,16(%rsp)                ; RF=1
         mov $db_msg2,%rsi
         call puts
-        iret
+        iretq
 		
 db_msg1: .asciz ">>> now, enter #DB handler"
 db_msg2: .ascii "now, exit #DB handler <<<\10\0"
@@ -396,6 +396,7 @@ db_msg2: .ascii "now, exit #DB handler <<<\10\0"
 ##apic timer interrupt handler		
 		.align 8
 apic_timer_handler:
+        nop
         mov $at_msg1, %rsi
 		call puts
 		call println
@@ -405,7 +406,7 @@ apic_timer_handler:
 		call puts
 		call println
 		movl $0, (APIC_BASE + EOI) 
-        iret
+        iretq
 
 at_msg1: .asciz ">>>>>>> now: enter APIC timer handler"
 at_msg2: .asciz "exit the APIC timer handler"
