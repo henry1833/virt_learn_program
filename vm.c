@@ -292,7 +292,7 @@ int main(int argc,char **argv)
     uint8_t buff[256];
     uint8_t *mem;
     struct kvm_sregs sregs;
-	struct kvm_run *run;
+    struct kvm_run *run;
     size_t mmap_size;
     struct KVMState *ks;
     struct stat stat;
@@ -336,8 +336,8 @@ int main(int argc,char **argv)
     if(ret < 0)
     {
         fprintf(stderr,"Read binary failed\n");
-	    close(fd);
-	    exit(-1);
+	close(fd);
+	exit(-1);
     }
 
 //    memcpy(mem,code,sizeof(code));
@@ -352,6 +352,17 @@ int main(int argc,char **argv)
     ret = ioctl(ks->vmfd,KVM_SET_USER_MEMORY_REGION,&region);
     if(ret == -1)
         err(1,"KVM_SET_USER_MEMORY_REGION");
+
+    struct kvm_enable_cap cap = {
+        .cap = KVM_CAP_SPLIT_IRQCHIP,
+	.flags = 0,
+	.args[0] = 24,
+    };
+
+    ret = ioctl(ks->vmfd,KVM_ENABLE_CAP,&cap);
+    if(ret){
+        fprintf(stderr,"Could not enable split irqchip mode\n");
+    }
 
     ks->cpus->vcpufd = vcpufd = ioctl(ks->vmfd,KVM_CREATE_VCPU,(unsigned long)0);
     if(ks->cpus->vcpufd == -1)
@@ -387,9 +398,9 @@ int main(int argc,char **argv)
 
     struct kvm_regs regs = {
         .rip = 0x7c00,
-	    .rax = 2,
-	    .rbx = 2,
-	    .rflags = 0x82,
+	.rax = 2,
+	.rbx = 2,
+	.rflags = 0x82,
     };
 
     ret = ioctl(vcpufd,KVM_SET_REGS,&regs);
@@ -405,46 +416,47 @@ int main(int argc,char **argv)
 	}
 	switch(run->exit_reason){
         case KVM_EXIT_IO:
-		    if(run->io.direction == KVM_EXIT_IO_OUT &&
-				    run->io.size == 1 && run->io.port == 0x3f8
-				    && run->io.count ==1)
-			    putchar(*(((char *)run)+run->io.data_offset));
-		    else{
-				printf("port:0x%x size:%d count:%d\n",run->io.port,run->io.size,run->io.count);
-			    errx(1,"unhandled KVM_EXIT_IO");
-		    }
-			break;
+            if(run->io.direction == KVM_EXIT_IO_OUT &&
+	       run->io.size == 1 && run->io.port == 0x3f8
+	       && run->io.count ==1){
+	           putchar(*(((char *)run)+run->io.data_offset));
+	    }
+	    else{
+	        printf("port:0x%x size:%d count:%d\n",run->io.port,run->io.size,run->io.count);
+                errx(1,"unhandled KVM_EXIT_IO");
+	    }
+	    break;
 	case KVM_EXIT_MMIO:
 		    printf("KVM: mmoi exit\nphys_addr:0x%lx len:0x%lx is_write:%d\n",
 			       run->mmio.phys_addr,run->mmio.len,run->mmio.is_write);
 		    ret = ioctl(vcpufd,KVM_GET_REGS,&regs);
-			printf("rip:0x%lx rflags:%lx\n",regs.rip,regs.rflags);
-			exit(-1);
+		    printf("rip:0x%lx rflags:%lx\n",regs.rip,regs.rflags);
+	            exit(-1);
 		    break;
-		case KVM_EXIT_SHUTDOWN:
-		    break;
-		case KVM_EXIT_UNKNOWN:
-		    fprintf(stderr,"KVM: unknown exit,hardware reason %lx\n",
+        case KVM_EXIT_SHUTDOWN:
+            break;
+        case KVM_EXIT_UNKNOWN:
+	    fprintf(stderr,"KVM: unknown exit,hardware reason %lx\n",
 			(uint64_t)run->hw.hardware_exit_reason);
-		    break;
-		case KVM_EXIT_SYSTEM_EVENT:
-		     break;
-		case KVM_EXIT_FAIL_ENTRY:
-		    errx(1,"KVM_EXIT_FAIL_ENTRY: hardware_entry_failure_reason =0x%llx",
-            (unsigned long long)run->fail_entry.hardware_entry_failure_reason);
+            break;
+        case KVM_EXIT_SYSTEM_EVENT:
+	    break;
+        case KVM_EXIT_FAIL_ENTRY:
+            errx(1,"KVM_EXIT_FAIL_ENTRY: hardware_entry_failure_reason =0x%llx",
+                 (unsigned long long)run->fail_entry.hardware_entry_failure_reason);
 
-		case KVM_EXIT_INTERNAL_ERROR:
-		    errx(1,"KVM_EXIT_INTERNAL_ERROR: suberror =0x%llx",
-            (unsigned long long)run->internal.suberror);
+	case KVM_EXIT_INTERNAL_ERROR:
+            errx(1,"KVM_EXIT_INTERNAL_ERROR: suberror =0x%llx",
+                   (unsigned long long)run->internal.suberror);
 
         case KVM_EXIT_HLT:
-	            puts("KVM_EXIT_HLT");
-		    return 0;
-		default:
-		    errx(1,"exit_reason =0x%x\n",run->exit_reason);
-	    }
-		printf("exit_reason =0x%x\n",run->exit_reason);
-		break;
+	    puts("KVM_EXIT_HLT");
+	    return 0;
+	default:
+            errx(1,"exit_reason =0x%x\n",run->exit_reason);
+	}
+	printf("exit_reason =0x%x\n",run->exit_reason);
+        break;
     }
-	return 0;
+    return 0;
 }
