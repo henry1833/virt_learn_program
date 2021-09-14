@@ -116,6 +116,18 @@ entry64:
 	mov %rax, 2(%rbx)
 	lidt (%rbx)
 	
+#set TSS descriptor
+    mov $tss64_sel, %rsi
+	mov $0x67, %rdi
+	mov $(SYSTEM_DATA64_BASE +(__task_status_segment - system_data64_entry)), %r8
+	mov $TSS64, %r9
+	call set_system_descriptor
+
+#load TSS table	
+	mov $tss64_sel, %ax
+	ltr %ax
+	
+	
 #set DE handler
     mov $DE_HANDLER_VECTOR, %rsi
 	mov $DE_handler,%rdi

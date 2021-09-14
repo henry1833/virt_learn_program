@@ -10,8 +10,11 @@ print_word_value:          jmp __print_word_value
 print_dword_value:         jmp __print_dword_value 
 print_qword_value:         jmp __print_qword_value
 get_byte_hex_string:       jmp __get_byte_hex_string
+set_system_descriptor:     jmp __set_system_descriptor
 set_interrupt_handler:     
 set_interrupt_descriptor:  jmp __set_interrupt_handler
+
+
 
 video_current: .quad 0xb8000
 
@@ -248,13 +251,38 @@ __get_byte_hex_string:
 	pop %rcx
 	ret
 
+#------------------------------------------------------------------------
+# set_system_descriptor(int selector, int limit, long long base, int type)
+# input:
+#                rsi: selector,  rdi: limit, r8: base, r9: type
+#--------------------------------------------------------------------------
+__set_system_descriptor:
+    sgdt (gdt_pointer)
+	mov (gdt_pointer + 2), %rax
+	and $0xfff8, %rsi
+	mov %r8, 4(%rax,%rsi)
+	mov %r8d, 2(%rax,%rsi)
+	or $0x80, %r9b
+	mov %r9b, 5(%rax,%rsi)
+	
+	mov %rdi,%r8
+	shr $12, %r8
+	cmovz %edi,%r8d
+	setnz %dil
+	mov %r8w, (%rax,%rsi)
+	shl $5, %r8w
+	shrd $17,%di, %r8w
+	mov %r8b, 6(%rax,%rsi)
+    ret
+
+
 #set interrupt handler
 #
 #input:
 #     %rsi: vector %rdi: handler
 __set_interrupt_handler:
     sidt (idt_pointer)
-	mov  (idt_pointer+2),%rax
+	mov  (idt_pointer + 2),%rax
 	shl  $4,%rsi
 	mov  %rdi,(%rax,%rsi)
 	mov  %rdi,4(%rax,%rsi)
@@ -268,7 +296,7 @@ __set_interrupt_handler:
 #input:
 #     %rsi: vector %rdi: handler
 __set_user_interrupt_handler:
-    sidt idt_pointer
+    sidt (idt_pointer)
 	mov  (idt_pointer+2),%rax
 	shl  $4,%rsi
 	mov  %rdi,(%rax,%rsi)
