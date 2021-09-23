@@ -290,7 +290,7 @@ int main(int argc,char **argv)
 {
     int fd,kvm,vcpufd,ret;
     uint8_t buff[256];
-    uint8_t *mem;
+    uint8_t *mem1,*mem2;
     struct kvm_sregs sregs;
     struct kvm_run *run;
     size_t mmap_size;
@@ -327,12 +327,12 @@ int main(int argc,char **argv)
     if(ks->vmfd == -1)
 	err(1,"KVM_CREATE_VM");
 
-    mem = mmap(NULL,0x4000000,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
-    if(!mem)
+    mem1 = mmap(NULL,0x80000,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+    if(!mem1)
         err(1,"allocating guest memory");
 
 
-    ret = read(fd,(mem+0xc00),stat.st_size+1);
+    ret = read(fd,(mem1+0xc00),stat.st_size+1);
     if(ret < 0)
     {
         fprintf(stderr,"Read binary failed\n");
@@ -340,18 +340,33 @@ int main(int argc,char **argv)
 	exit(-1);
     }
 
-//    memcpy(mem,code,sizeof(code));
     close(fd);
-    struct kvm_userspace_memory_region region = {
+    struct kvm_userspace_memory_region region1 = {
         .slot = 0,
-	    .guest_phys_addr =0x7000,
-	    .memory_size = 0x4000000,
-	    .userspace_addr = (uint64_t)mem,
+	.guest_phys_addr =0x7000,
+	.memory_size = 0x80000,
+	.userspace_addr = (uint64_t)mem1,
     };
 
-    ret = ioctl(ks->vmfd,KVM_SET_USER_MEMORY_REGION,&region);
+    ret = ioctl(ks->vmfd,KVM_SET_USER_MEMORY_REGION,&region1);
     if(ret == -1)
-        err(1,"KVM_SET_USER_MEMORY_REGION");
+        err(1,"KVM_SET_USER_MEMORY_REGION region 1");
+
+    mem2 = mmap(NULL,0x4000000,PROT_READ|PROT_WRITE,MAP_SHARED|MAP_ANONYMOUS,-1,0);
+    if(!mem2)
+        err(1,"allocating guest memory");
+
+    struct kvm_userspace_memory_region region2 = {
+        .slot = 2,
+	.guest_phys_addr =0x100000,
+	.memory_size = 0x4000000,
+	.userspace_addr = (uint64_t)mem2,
+    };
+
+    ret = ioctl(ks->vmfd,KVM_SET_USER_MEMORY_REGION,&region2);
+    if(ret == -1)
+        err(1,"KVM_SET_USER_MEMORY_REGION region 2");
+
 
     struct kvm_enable_cap cap = {
         .cap = KVM_CAP_SPLIT_IRQCHIP,
@@ -408,6 +423,8 @@ int main(int argc,char **argv)
 	   err(1,"KVM_SET_REGS");
     }
 
+    uint64_t phys_addr; 
+
     while(1)
     {
         ret = ioctl(vcpufd,KVM_RUN,NULL);
@@ -427,11 +444,21 @@ int main(int argc,char **argv)
 	    }
 	    break;
 	case KVM_EXIT_MMIO:
-		    printf("KVM: mmoi exit\nphys_addr:0x%lx len:0x%lx is_write:%d\n",
+	    phys_addr = run->mmio.phys_addr;
+            if(phys_addr >= 0xb8000 && phys_addr <= 0xba000){
+		if((phys_addr - 0xb8000) % (2 *80) == 0)
+		{
+		    printf("\n");
+		}	
+		printf("%c",run->mmio.data[0]);
+	    }
+	    else{	   
+		printf("KVM: mmoi exit\nphys_addr:0x%lx len:0x%lx is_write:%d\n",
 			       run->mmio.phys_addr,run->mmio.len,run->mmio.is_write);
-		    ret = ioctl(vcpufd,KVM_GET_REGS,&regs);
-		    printf("rip:0x%lx rflags:%lx\n",regs.rip,regs.rflags);
-	            exit(-1);
+		ret = ioctl(vcpufd,KVM_GET_REGS,&regs);
+		printf("rip:0x%lx rflags:%lx\n",regs.rip,regs.rflags);
+		exit(-1);
+            }
 		    break;
         case KVM_EXIT_SHUTDOWN:
             break;
@@ -455,8 +482,8 @@ int main(int argc,char **argv)
 	default:
             errx(1,"exit_reason =0x%x\n",run->exit_reason);
 	}
-	printf("exit_reason =0x%x\n",run->exit_reason);
-        break;
+//	printf("exit_reason =0x%x\n",run->exit_reason);
+//        break;
     }
     return 0;
 }
