@@ -1,0 +1,9 @@
+export WORKSPACE=/home/wanjk/edk2-platforms
+export PACKAGES_PATH=/home/wanjk/edk2-platforms:/home/wanjk/edk2
+source edksetup.sh
+make -j1 -C BaseTools/
+GCC5_AARCH64_PREFIX=/usr/aarch64-none-linux-gnu/bin/aarch64-linux-gnu-
+build -n 2 -a AARCH64 -t GCC5 -p Platform/ARM/VExpressPkg/ArmVExpress-FVP-AArch64.dsc -b DEBUG all
+
+
+--arm-v8.4 --secure-memory --visualization --gicv3 --data="/home/wanjk/arm-trusted-firmware/build/fvp/debug/bl1.bin"@0x0  --data="/home/wanjk/arm-trusted-firmware/build/fvp/debug/fip.bin"@0x8000000
