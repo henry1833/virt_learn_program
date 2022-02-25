@@ -11,8 +11,10 @@
 #include<sys/mman.h>
 #include<sys/stat.h>
 #include<sys/types.h>
+#include<sys/eventfd.h>
 #include<errno.h>
 #include<ctype.h>
+#include<pthread.h>
 #include<cpuid.h>
 
 #define KVM_API_VERSION 12
@@ -20,6 +22,12 @@
 static int cpu_nums=1;
 static size_t vm_memory_size = 0x200000;
 static char *filename = NULL;
+
+struct vm_parameter{
+    int cpu_nums;
+	size_t vm_memory_size;	
+	char *filename;
+};
 
 struct VCPUState{
     int  vcpufd;
@@ -29,6 +37,8 @@ struct VCPUState{
 struct KVMState{
 	int fd;
 	int vmfd;
+	int ioefd;
+	int irqefd;
 	struct VCPUState *cpus;
 };
 
@@ -50,7 +60,17 @@ int kvm_init(struct KVMState *s)
 		ret = -EINVAL;
 		goto err;
 	}
-	ret = 0;
+	ret = eventfd(0,EFD_NONBLOCK|EFD_CLOEXEC);
+	if(ret > 0){
+		s->ioefd = ret;
+		ret = 0;
+	}
+	
+	ret = eventfd(0,EFD_NONBLOCK|EFD_CLOEXEC);
+	if(ret > 0){
+		s->irqefd = ret;
+		ret = 0;
+	}
 err:
     return ret;	
 }
@@ -286,6 +306,99 @@ int vm_init_cpuid(struct KVMState *ks)
     return ret;
 }
 
+#define virq 0x48
+
+
+int set_ioeventfd_mmio(struct KVMState *ks,uint64_t addr,uint32_t size)
+{
+	int ret;
+	struct kvm_ioeventfd iofd = {
+		.datamatch = 0x5d7d,
+		.addr = addr,
+		.len = size,
+		.flags = KVM_IOEVENTFD_FLAG_DATAMATCH,
+		.fd = ks->ioefd,
+	};
+	
+	struct kvm_irqfd irqfd = {
+        .fd = ks->irqefd,
+		.gsi = virq,
+		.flags = 0,
+	};
+/*	
+	ret = ioctl(ks->vmfd,KVM_IOEVENTFD,&iofd);
+	if(ret < 0){
+		return -errno;
+	}
+*/
+	
+	ret = ioctl(ks->vmfd,KVM_IRQFD,&irqfd);
+	if(ret < 0){
+		printf("register IRQFD failed\n");
+		return -errno;
+	}
+	
+	
+	return 0;
+}
+
+
+static void* wait_eventfd(void *arg)
+{
+	struct KVMState *ks = (struct KVMState*)arg;
+	int retval;
+	int s;
+	uint64_t eftd_ctr;
+	fd_set rfds;
+//	fd_set wfds;
+	
+	printf("thread worker start running...\n");
+	
+	FD_ZERO(&rfds);
+//	FD_ZERO(&wfds);
+	
+	while(1){
+	    FD_SET(ks->ioefd,&rfds);
+//		FD_SET(ks->efd,&wfds);
+    
+	    retval = select(ks->ioefd+1,&rfds,NULL,NULL,NULL);
+	
+	    if(retval == -1){
+		    printf("\n select() error, Exiting......\n");
+	    }else if(retval > 0){
+			if(FD_ISSET(ks->ioefd,&rfds)){
+		        s = read(ks->ioefd,&eftd_ctr,sizeof(uint64_t));
+		        if(s != sizeof(uint64_t)){
+			        printf("\neventfd read error. Exiting...\n");
+		        }else{
+			        printf("\neventfd from read(), value read = 0x%llx\n",eftd_ctr);
+		        }
+
+			}
+/*			
+			if(FD_ISSET(ks->efd,&wfds)){
+                printf("printf eventfd write\n");
+
+				eftd_ctr = 0x9d9d;
+				s = write(ks->efd,&eftd_ctr,sizeof(uint64_t));
+		        if(s != sizeof(uint64_t)){
+			        printf("\neventfd write error. Exiting...\n");
+		        }else{
+			        printf("\neventfd write(), write size = 0x%x\n",s);
+		        }
+
+             
+			}
+*/
+//           sleep(2);
+	   }else if(retval == 0){
+		        printf("\nSelect() says that no data was available\n");
+	   }
+	}
+}
+
+
+
 int main(int argc,char **argv)
 {
     int fd,kvm,vcpufd,ret;
@@ -336,16 +449,16 @@ int main(int argc,char **argv)
     if(ret < 0)
     {
         fprintf(stderr,"Read binary failed\n");
-	close(fd);
-	exit(-1);
+        close(fd);
+        exit(-1);
     }
 
     close(fd);
     struct kvm_userspace_memory_region region1 = {
         .slot = 0,
-	.guest_phys_addr =0x7000,
-	.memory_size = 0x80000,
-	.userspace_addr = (uint64_t)mem1,
+        .guest_phys_addr =0x7000,
+        .memory_size = 0x80000,
+        .userspace_addr = (uint64_t)mem1,
     };
 
     ret = ioctl(ks->vmfd,KVM_SET_USER_MEMORY_REGION,&region1);
@@ -358,9 +471,9 @@ int main(int argc,char **argv)
 
     struct kvm_userspace_memory_region region2 = {
         .slot = 2,
-	.guest_phys_addr =0x100000,
-	.memory_size = 0x4000000,
-	.userspace_addr = (uint64_t)mem2,
+	    .guest_phys_addr =0x100000,
+	    .memory_size = 0x4000000,
+	    .userspace_addr = (uint64_t)mem2,
     };
 
     ret = ioctl(ks->vmfd,KVM_SET_USER_MEMORY_REGION,&region2);
@@ -370,14 +483,34 @@ int main(int argc,char **argv)
 
     struct kvm_enable_cap cap = {
         .cap = KVM_CAP_SPLIT_IRQCHIP,
-	.flags = 0,
-	.args[0] = 24,
+	    .flags = 0,
+	    .args[0] = 24,
     };
 
     ret = ioctl(ks->vmfd,KVM_ENABLE_CAP,&cap);
     if(ret){
         fprintf(stderr,"Could not enable split irqchip mode\n");
     }
+
+	
+	struct kvm_irq_routing *irq_routes = malloc(sizeof(struct kvm_irq_routing) + sizeof(struct kvm_irq_routing_entry));
+	
+    irq_routes->nr = 1;
+    irq_routes->flags = 0;
+	
+    irq_routes->entries[0].gsi = virq;
+    irq_routes->entries[0].type = KVM_IRQ_ROUTING_MSI;
+    irq_routes->entries[0].flags = 0;
+    irq_routes->entries[0].u.msi.address_lo = (0xfee00000|0xff<<12);
+    irq_routes->entries[0].u.msi.address_hi = 0;
+    irq_routes->entries[0].u.msi.data = (0x30);
+ 
+	
+	ret = ioctl(ks->vmfd,KVM_SET_GSI_ROUTING,irq_routes);
+	if(ret){
+		fprintf(stderr,"Create IRQCHIP FAILED! %s\n",strerror(errno));
+	}
+
 
     ks->cpus->vcpufd = vcpufd = ioctl(ks->vmfd,KVM_CREATE_VCPU,(unsigned long)0);
     if(ks->cpus->vcpufd == -1)
@@ -393,6 +526,11 @@ int main(int argc,char **argv)
     }else if(mmap_size < sizeof(struct kvm_run)){	    
 	    err(1,"KVM_GET_VCPU_MMAP_SIZE unexpectedly small");
     }
+
+    ret = set_ioeventfd_mmio(ks,0x8000000,0x8);
+	if(ret < 0){
+		err(1,"Set ioeventd mmio");
+	}
 
     ks->cpus->kvm_run = run = mmap(NULL,mmap_size,PROT_READ|PROT_WRITE,MAP_SHARED,vcpufd,0);
     if(!run)
@@ -413,9 +551,9 @@ int main(int argc,char **argv)
 
     struct kvm_regs regs = {
         .rip = 0x7c00,
-	.rax = 2,
-	.rbx = 2,
-	.rflags = 0x82,
+        .rax = 2,
+        .rbx = 2,
+        .rflags = 0x82,
     };
 
     ret = ioctl(vcpufd,KVM_SET_REGS,&regs);
@@ -423,41 +561,58 @@ int main(int argc,char **argv)
 	   err(1,"KVM_SET_REGS");
     }
 
+    pthread_t pthid;
+/*	
+	ret = pthread_create(&pthid,NULL,wait_eventfd,ks);
+	if(ret!=0){
+		err(1,"Create pthread failed\n");
+	}
+*/	
     uint64_t phys_addr; 
 
     while(1)
     {
         ret = ioctl(vcpufd,KVM_RUN,NULL);
-	if(ret == -1){
-	    err(1,"KVM_RUN");
-	}
-	switch(run->exit_reason){
+        if(ret == -1){
+            err(1,"KVM_RUN");
+        }
+        switch(run->exit_reason){
         case KVM_EXIT_IO:
             if(run->io.direction == KVM_EXIT_IO_OUT &&
-	       run->io.size == 1 && run->io.port == 0x3f8
-	       && run->io.count ==1){
+	           run->io.size == 1 && run->io.port == 0x3f8
+	           && run->io.count ==1){
 	           putchar(*(((char *)run)+run->io.data_offset));
-	    }
-	    else{
-	        printf("port:0x%x size:%d count:%d\n",run->io.port,run->io.size,run->io.count);
+	        }
+	        else{
+	           printf("port:0x%x size:%d count:%d\n",run->io.port,run->io.size,run->io.count);
                 errx(1,"unhandled KVM_EXIT_IO");
-	    }
-	    break;
-	case KVM_EXIT_MMIO:
-	    phys_addr = run->mmio.phys_addr;
+	        }
+	        break;
+        case KVM_EXIT_MMIO:
+	        phys_addr = run->mmio.phys_addr;
             if(phys_addr >= 0xb8000 && phys_addr <= 0xba000){
-		if((phys_addr - 0xb8000) % (2 *80) == 0)
-		{
-		    printf("\n");
-		}	
-		printf("%c",run->mmio.data[0]);
-	    }
-	    else{	   
-		printf("KVM: mmoi exit\nphys_addr:0x%lx len:0x%lx is_write:%d\n",
+		        if((phys_addr - 0xb8000) % (2 *80) == 0)
+		        {
+		           printf("\n");
+		        }	
+		        printf("%c",run->mmio.data[0]);
+	        }else if(phys_addr == 0x8000000)
+			{
+				int res;
+				uint64_t ctrval=0x1;
+				printf("\nPage fault mmio address:0x%llx value:0x%llx\n",phys_addr,*((uint64_t*)run->mmio.data));
+				getchar();
+				res = write(ks->irqefd,&ctrval,sizeof(uint64_t));
+				if(res != sizeof(ctrval)){
+					printf("write data failed:%s\n",strerror(errno));
+				}
+				
+			}else{	   
+		        printf("KVM: mmoi exit\nphys_addr:0x%lx len:0x%lx is_write:%d\n",
 			       run->mmio.phys_addr,run->mmio.len,run->mmio.is_write);
-		ret = ioctl(vcpufd,KVM_GET_REGS,&regs);
-		printf("rip:0x%lx rflags:%lx\n",regs.rip,regs.rflags);
-		exit(-1);
+                ret = ioctl(vcpufd,KVM_GET_REGS,&regs);
+                printf("rip:0x%lx rflags:%lx\n",regs.rip,regs.rflags);
+				exit(-1);
             }
 		    break;
         case KVM_EXIT_SHUTDOWN:
@@ -472,16 +627,16 @@ int main(int argc,char **argv)
             errx(1,"KVM_EXIT_FAIL_ENTRY: hardware_entry_failure_reason =0x%llx",
                  (unsigned long long)run->fail_entry.hardware_entry_failure_reason);
 
-	case KVM_EXIT_INTERNAL_ERROR:
+	    case KVM_EXIT_INTERNAL_ERROR:
             errx(1,"KVM_EXIT_INTERNAL_ERROR: suberror =0x%llx",
                    (unsigned long long)run->internal.suberror);
 
         case KVM_EXIT_HLT:
 	    puts("KVM_EXIT_HLT");
 	    return 0;
-	default:
+        default:
             errx(1,"exit_reason =0x%x\n",run->exit_reason);
-	}
+	    }
 //	printf("exit_reason =0x%x\n",run->exit_reason);
 //        break;
     }
