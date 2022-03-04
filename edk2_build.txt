@@ -7,3 +7,6 @@ build -n 2 -a AARCH64 -t GCC5 -p Platform/ARM/VExpressPkg/ArmVExpress-FVP-AArch6
 
 
 --arm-v8.4 --secure-memory --visualization --gicv3 --data="/home/wanjk/arm-trusted-firmware/build/fvp/debug/bl1.bin"@0x0  --data="/home/wanjk/arm-trusted-firmware/build/fvp/debug/fip.bin"@0x8000000
+
+
+sudo virsh qemu-monitor-command centos8 --hmp "help info"
