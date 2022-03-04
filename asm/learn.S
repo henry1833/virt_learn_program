@@ -18,10 +18,10 @@ _start:
 	mov $BASE,%sp
     sti	
 
-    call clear_screen
-	call get_driver_parameters
-	movl $75,total_sectors
-    call load_module
+#    call clear_screen
+#	call get_driver_parameters
+#	movl $75,total_sectors
+#    call load_module
 	
 	lgdt gdt_pointer32 		# load GDT	
 	lidt idt_pointer32      # load IDT
@@ -47,7 +47,7 @@ boot_magic: .byte 0x55,0xaa
 entry32:
 ##set protected mode run environment
 ##
-    call disable_timer
+#    call disable_timer
 	mov $data32_sel, %ax
 	mov %ax,%ds
 	mov %ax,%ss
@@ -58,6 +58,7 @@ entry32:
 ##open SSE instruction set
     mov %cr4, %eax
 	bts $0x9, %eax
+	bts $13, %eax
 	mov %eax, %cr4
 
 #set page PAE
@@ -195,13 +196,13 @@ entry64:
     sti
   
     call enable_apic
-    
+   
 	mov (APIC_BASE + APIC_VER), %eax
-	
-    movl $(TIMER_ONE_SHOT|APIC_TIMER_VECTOR),(APIC_BASE + LVT_TIMER)	
-	movl $256, (APIC_BASE + TIMER_ICR)
-	
 
+#   movl $(TIMER_ONE_SHOT|APIC_TIMER_VECTOR),(APIC_BASE + LVT_TIMER)	
+#	movl $0x100, (APIC_BASE + TIMER_ICR)
+	
+	
     push $(USER_SS|0x3)
 	mov  $USER_RSP, %rax
 	push %rax
@@ -209,9 +210,9 @@ entry64:
 	push $user_entry
     retfq
 
-user_entry: 
-    mov $0x8f999990,%rax
-	mov (%rax),%rbx
+user_entry:
+	movq $0x7d7d,(0x8000000)
+#    movq (0x8000000),%rax
     jmp .
 
 

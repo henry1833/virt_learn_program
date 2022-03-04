@@ -344,6 +344,7 @@ PF_handler:
         add $8,%rsp
 		mov $pf_msg1,%rsi
 		call puts
+		call println
 		mov $pf_msg2,%rsi
 		call puts
 		mov (%rsp),%rsi
@@ -360,7 +361,7 @@ PF_handler:
         jmp . 
         iretq
 		
-pf_msg1: .ascii "\10>>> Now, enter #PF handler\10\0"
+pf_msg1: .asciz ">>> Now, enter #PF handler"
 pf_msg2: .asciz ">>>>>>> occur at: 0x"       
 pf_msg3: .asciz ">>>>>>> page fault address: 0x"
 
