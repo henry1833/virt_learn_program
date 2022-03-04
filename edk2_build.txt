@@ -10,3 +10,5 @@ build -n 2 -a AARCH64 -t GCC5 -p Platform/ARM/VExpressPkg/ArmVExpress-FVP-AArch6
 
 
 sudo virsh qemu-monitor-command centos8 --hmp "help info"
+
+../configure --target-list=aarch64-softmmu,i386-softmmu,riscv32-softmmu,riscv64-softmmu,x86_64-softmmu --enable-docs --enable-modules --enable-vnc --enable-debug-tcg --enable-debug-info --enable-kvm --enable-debug --enable-plugins --enable-linux-aio --disable-brlapi --enable-coroutine-pool --enable-lzo --enable-pie --disable-xen --disable-qcow1 --disable-dmg --enable-vhost-vsock --disable-gtk --enable-system --enable-iconv --enable-vhost-net --enable-opengl --disable-sdl --enable-vnc-png --enable-vnc-sasl --enable-tcg --disable-bochs --enable-spice --enable-usb-redir
